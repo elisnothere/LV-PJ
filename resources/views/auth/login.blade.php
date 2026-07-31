@@ -14,7 +14,7 @@
         </div>
         <div class="card">
             <div class="card-body login-card-body">
-                <p class="login-box-msg">Ingrese sus credenciales</p>
+                <p class="login-box-msg">Ingrese sus c</p>
 
                 @if ($errors->any())
                     <div class="alert alert-danger">Correo o contrasena invalidos.</div>
