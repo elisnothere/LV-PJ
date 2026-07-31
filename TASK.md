@@ -9,7 +9,7 @@
 - Se puede buscar en tienda tambien. Envio = 0.
 - Vamos a crear un nuevo layout, no muy trabajado tampoco, pero que sea diferente al principal. Este layout se usara en "categorias, catalogo, y contacto". Asi podemos separar el "dashboard" de la UI.
 - Hacer una funcionalidad de seguimiento de pedido. El usuario debe poder entrar a una seccion y ver el pedido que hizo. En este pedido, va a poder ver cuando (fecha y hora) compro, cuando paso a estado en proceso, enviado, recibido, etc.
-- Si un producto no tiene stock, se va a mostrar, pero no se puede comprar. Si no hay stock, se muestra un input donde podes poner tu email, y te registras en una lista que te avisa cuando ese producto vuelve a tener stock. Esto se hace por medio de un email. PD: esto es medio hendy. (preguntale a la AI por observers).
+- Si un producto no tiene stock, se va a mostrar, pero no se puede comprar. Si no hay stock, se muestra un input donde podes poner tu email, y te registras en una lista que te avisa cuando ese producto vuelve a tener stock. Esto se hace por medio de un email. PD: esto es medio hendy. (preguntale a la AI por observers). Usar mailtrap para enviar mails.
 - poder marcar un producto como oferta. Las ofertas se pueden buscar en el catalogo.
 - 
 
