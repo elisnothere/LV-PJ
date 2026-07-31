@@ -35,6 +35,7 @@ class CartController extends Controller
             'price' => (float) $product->price,
             'quantity' => $newQuantity,
             'stock' => $product->stock,
+            'image_url' => $product->image_url,
         ];
 
         session(['cart' => $cart]);

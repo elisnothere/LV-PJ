@@ -31,6 +31,7 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
+                        <th style="width: 96px;">Foto</th>
                         <th>Producto</th>
                         <th>Precio</th>
                         <th style="width: 180px;">Cantidad</th>
@@ -41,6 +42,23 @@
                 <tbody>
                     @forelse ($cart as $item)
                         <tr>
+                            <td>
+                                @if (!empty($item['image_url']))
+                                    <img
+                                        src="{{ $item['image_url'] }}"
+                                        alt="{{ $item['name'] }}"
+                                        class="img-thumbnail"
+                                        style="width: 64px; height: 64px; object-fit: cover;"
+                                    >
+                                @else
+                                    <div
+                                        class="bg-body-secondary d-flex align-items-center justify-content-center rounded"
+                                        style="width: 64px; height: 64px;"
+                                    >
+                                        <i class="bi bi-box-seam text-secondary"></i>
+                                    </div>
+                                @endif
+                            </td>
                             <td>{{ $item['name'] }}</td>
                             <td>${{ number_format($item['price'], 2) }}</td>
                             <td>
@@ -66,7 +84,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center py-4">El carrito esta vacio.</td>
+                            <td colspan="6" class="text-center py-4">El carrito esta vacio.</td>
                         </tr>
                     @endforelse
                 </tbody>
