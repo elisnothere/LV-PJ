@@ -3,6 +3,63 @@
 @section('title', 'Sistema - Catalogo')
 @section('page-title', 'Catalogo de productos Online')
 
+@push('css')
+    <style>
+        .catalog-pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .catalog-pagination nav > div:first-child {
+            display: none;
+        }
+
+        .catalog-pagination nav > div:last-child {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .catalog-pagination .pagination {
+            gap: .35rem;
+            flex-wrap: wrap;
+            margin-bottom: 0;
+        }
+
+        .catalog-pagination .page-item .page-link,
+        .catalog-pagination .page-item span {
+            min-width: 2.5rem;
+            padding: .45rem .75rem;
+            border-radius: .65rem;
+            font-size: .95rem;
+            line-height: 1.2;
+            text-align: center;
+            box-shadow: none;
+        }
+
+        .catalog-pagination .page-item.active .page-link,
+        .catalog-pagination .page-item.active span {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: #fff;
+        }
+
+        .catalog-pagination .page-item.disabled .page-link,
+        .catalog-pagination .page-item.disabled span {
+            opacity: .55;
+        }
+
+        @media (max-width: 576px) {
+            .catalog-pagination .page-item .page-link,
+            .catalog-pagination .page-item span {
+                min-width: 2.2rem;
+                padding: .4rem .6rem;
+                font-size: .9rem;
+            }
+        }
+    </style>
+@endpush
 @section('contenido')
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -83,5 +140,11 @@
         @endforelse
     </div>
 
-    {{ $products->links() }}
+    <div class="catalog-pagination">
+        {{ $products->links('pagination::bootstrap-5') }}
+    </div>
 @endsection
+
+
+
+
