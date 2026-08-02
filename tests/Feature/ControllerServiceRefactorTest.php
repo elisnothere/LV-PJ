@@ -24,6 +24,18 @@ function categoryForTest(string $name): Category
     ]);
 }
 
+function attachPrimaryImage(Product $product, string $imageUrl = '/storage/productos/test-product.jpg'): void
+{
+    $product->images()->create([
+        'image_url' => $imageUrl,
+        'source' => 'upload',
+        'is_primary' => true,
+        'sort_order' => 1,
+    ]);
+
+    $product->forceFill(['image_url' => $imageUrl])->save();
+}
+
 it('authenticates an active user through the login endpoint', function () {
     $user = User::create([
         'name' => 'Cliente',
@@ -121,6 +133,7 @@ it('creates an order and decrements stock through the order service', function (
         'stock' => 5,
         'active' => true,
     ]);
+    attachPrimaryImage($product, '/storage/productos/order-service.jpg');
 
     $order = $service->createFromCart([
         [
@@ -145,6 +158,7 @@ it('creates an order and decrements stock through the order service', function (
         ->and((float) $order->shipping_cost)->toBe(15.0)
         ->and((float) $order->total)->toBe(65.0)
         ->and((float) $order->items->first()->regular_unit_price)->toBe(25.0)
+        ->and($order->items->first()->product_image_url)->toBe('/storage/productos/order-service.jpg')
         ->and($order->shipping_city_name)->toBe('Asuncion');
 });
 
@@ -263,6 +277,7 @@ it('uses promotional price in catalog cart checkout and order snapshots', functi
         'stock' => 5,
         'active' => true,
     ]);
+    attachPrimaryImage($product, '/storage/productos/promo-auriculares.jpg');
 
     $catalogResponse = $this->get(route('catalog.index'));
     $catalogResponse->assertOk();
@@ -280,10 +295,12 @@ it('uses promotional price in catalog cart checkout and order snapshots', functi
     $cartResponse->assertOk();
     $cartResponse->assertSee('$30.00', false);
     $cartResponse->assertSee('$60.00', false);
+    $cartResponse->assertSee('/storage/productos/promo-auriculares.jpg', false);
 
     $checkoutResponse = $this->actingAs($user)->get(route('orders.checkout', ['shipping_city_id' => $shippingCity->id]));
     $checkoutResponse->assertOk();
     $checkoutResponse->assertSee('$72.50', false);
+    $checkoutResponse->assertSee('/storage/productos/promo-auriculares.jpg', false);
 
     $storeResponse = $this->actingAs($user)->post(route('orders.store'), [
         'customer_name' => 'Cliente Promo',
@@ -304,12 +321,50 @@ it('uses promotional price in catalog cart checkout and order snapshots', functi
 
     $this->assertDatabaseHas('order_items', [
         'product_id' => $product->id,
+        'product_image_url' => '/storage/productos/promo-auriculares.jpg',
         'unit_price' => 30,
         'regular_unit_price' => 40,
         'subtotal' => 60,
     ]);
 
     Carbon::setTestNow();
+});
+
+it('shows a fallback placeholder when cart or checkout items do not have images', function () {
+    Session::start();
+
+    $user = User::create([
+        'name' => 'Cliente Fallback',
+        'email' => 'cliente-fallback@test.com',
+        'password' => 'password123',
+        'role' => 'cliente',
+        'active' => true,
+    ]);
+
+    $shippingCity = ShippingCity::create([
+        'name' => 'Lambaré',
+        'shipping_cost' => 8,
+        'active' => true,
+    ]);
+
+    $product = Product::create([
+        'name' => 'Producto sin imagen',
+        'category_id' => categoryForTest('General')->id,
+        'description' => 'Desc',
+        'price' => 20,
+        'stock' => 2,
+        'active' => true,
+    ]);
+
+    $this->actingAs($user)->post(route('cart.add', $product), ['quantity' => 1]);
+
+    $cartResponse = $this->actingAs($user)->get(route('cart.index'));
+    $cartResponse->assertOk();
+    $cartResponse->assertSee('bi-box-seam', false);
+
+    $checkoutResponse = $this->actingAs($user)->get(route('orders.checkout', ['shipping_city_id' => $shippingCity->id]));
+    $checkoutResponse->assertOk();
+    $checkoutResponse->assertSee('bi-box-seam', false);
 });
 
 it('does not apply a future or expired promotion', function () {
@@ -538,6 +593,7 @@ it('calculates shipping in checkout and persists an order snapshot', function ()
         'stock' => 5,
         'active' => true,
     ]);
+    attachPrimaryImage($product, '/storage/productos/checkout-order.jpg');
 
     $this->actingAs($user)->post(route('cart.add', $product), ['quantity' => 2]);
 
@@ -547,6 +603,7 @@ it('calculates shipping in checkout and persists an order snapshot', function ()
     $checkoutResponse->assertSee('San Lorenzo');
     $checkoutResponse->assertSee('$12.50', false);
     $checkoutResponse->assertSee('$92.50', false);
+    $checkoutResponse->assertSee('/storage/productos/checkout-order.jpg', false);
 
     $storeResponse = $this->actingAs($user)->post(route('orders.store'), [
         'customer_name' => 'Cliente Pedido',
@@ -565,12 +622,67 @@ it('calculates shipping in checkout and persists an order snapshot', function ()
         'shipping_cost' => 12.5,
         'total' => 92.5,
     ]);
+    $this->assertDatabaseHas('order_items', [
+        'product_id' => $product->id,
+        'product_image_url' => '/storage/productos/checkout-order.jpg',
+    ]);
 
     $shippingCity->update(['shipping_cost' => 99]);
 
     $order = \App\Models\Order::latest()->first();
     expect((float) $order->shipping_cost)->toBe(12.5)
         ->and((float) $order->total)->toBe(92.5);
+});
+
+it('preserves the historical order image even if the product image changes later', function () {
+    $user = User::create([
+        'name' => 'Cliente Imagen',
+        'email' => 'cliente-imagen@test.com',
+        'password' => 'password123',
+        'role' => 'cliente',
+        'active' => true,
+    ]);
+
+    $shippingCity = ShippingCity::create([
+        'name' => 'Fernando',
+        'shipping_cost' => 5,
+        'active' => true,
+    ]);
+
+    $product = Product::create([
+        'name' => 'Mouse gamer',
+        'category_id' => categoryForTest('Gaming')->id,
+        'description' => 'Desc',
+        'price' => 55,
+        'stock' => 3,
+        'active' => true,
+    ]);
+    attachPrimaryImage($product, '/storage/productos/order-original.jpg');
+
+    $this->actingAs($user)->post(route('cart.add', $product), ['quantity' => 1]);
+    $this->actingAs($user)->post(route('orders.store'), [
+        'customer_name' => 'Cliente Imagen',
+        'customer_email' => 'cliente-imagen@test.com',
+        'customer_phone' => '555-123',
+        'delivery_address' => 'Av. Imagen',
+        'shipping_city_id' => $shippingCity->id,
+    ])->assertRedirect();
+
+    $product->images()->update(['is_primary' => false]);
+    $product->images()->create([
+        'image_url' => '/storage/productos/order-updated.jpg',
+        'source' => 'upload',
+        'is_primary' => true,
+        'sort_order' => 2,
+    ]);
+    $product->forceFill(['image_url' => '/storage/productos/order-updated.jpg'])->save();
+
+    $order = \App\Models\Order::with('items')->latest()->first();
+
+    $response = $this->actingAs($user)->get(route('orders.mine.show', $order));
+    $response->assertOk();
+    $response->assertSee('/storage/productos/order-original.jpg', false);
+    $response->assertDontSee('/storage/productos/order-updated.jpg', false);
 });
 
 it('rejects inactive shipping cities during checkout', function () {

@@ -38,7 +38,7 @@ class OrderService
             $subtotal = 0.0;
 
             foreach ($cart as $item) {
-                $product = Product::lockForUpdate()->find($item['id']);
+                $product = Product::lockForUpdate()->with('primaryImage')->find($item['id']);
 
                 if (! $product || ! $product->active || $product->stock < $item['quantity']) {
                     throw ValidationException::withMessages([
@@ -56,6 +56,7 @@ class OrderService
                 $order->items()->create([
                     'product_id' => $product->id,
                     'product_name' => $product->name,
+                    'product_image_url' => $product->primary_image_url,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
                     'regular_unit_price' => $regularUnitPrice,

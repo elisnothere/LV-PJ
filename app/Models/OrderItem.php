@@ -11,10 +11,15 @@ class OrderItem extends Model
         'order_id',
         'product_id',
         'product_name',
+        'product_image_url',
         'quantity',
         'unit_price',
         'regular_unit_price',
         'subtotal',
+    ];
+
+    protected $appends = [
+        'display_image_url',
     ];
 
     protected function casts(): array
@@ -34,5 +39,11 @@ class OrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function getDisplayImageUrlAttribute(): ?string
+    {
+        return $this->product_image_url
+            ?: $this->product?->primary_image_url;
     }
 }

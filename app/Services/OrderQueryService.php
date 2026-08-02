@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Order;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class OrderQueryService
 {
@@ -32,7 +32,7 @@ class OrderQueryService
 
     public function loadForDisplay(Order $order): Order
     {
-        $order->load('items');
+        $order->load(['items.product.primaryImage']);
 
         return $order;
     }
@@ -43,7 +43,7 @@ class OrderQueryService
             throw new AuthorizationException();
         }
 
-        $order->load('items');
+        $order->load(['items.product.primaryImage']);
 
         return $order;
     }

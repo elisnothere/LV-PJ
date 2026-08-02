@@ -43,13 +43,12 @@
                     @forelse ($cart as $item)
                         <tr>
                             <td>
-                                @if (! empty($item['image_url']))
-                                    <img src="{{ $item['image_url'] }}" alt="{{ $item['name'] }}" class="img-thumbnail" style="width: 64px; height: 64px; object-fit: cover;">
-                                @else
-                                    <div class="bg-body-secondary d-flex align-items-center justify-content-center rounded text-secondary" style="width: 64px; height: 64px;">
-                                        <i class="bi bi-box-seam"></i>
-                                    </div>
-                                @endif
+                                @include('partials.product-image', [
+                                    'imageUrl' => $item['image_url'] ?? null,
+                                    'alt' => $item['name'],
+                                    'size' => '64px',
+                                    'iconClass' => 'bi-box-seam',
+                                ])
                             </td>
                             <td>{{ $item['name'] }}</td>
                             <td>

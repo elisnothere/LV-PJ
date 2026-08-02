@@ -15,9 +15,10 @@
                     <h3 class="card-title">Detalle del pedido</h3>
                 </div>
                 <div class="card-body table-responsive p-0">
-                    <table class="table mb-0">
+                    <table class="table mb-0 align-middle">
                         <thead>
                             <tr>
+                                <th style="width: 96px;">Foto</th>
                                 <th>Producto</th>
                                 <th>Cantidad</th>
                                 <th>Precio</th>
@@ -27,6 +28,14 @@
                         <tbody>
                             @foreach ($order->items as $item)
                                 <tr>
+                                    <td>
+                                        @include('partials.product-image', [
+                                            'imageUrl' => $item->display_image_url,
+                                            'alt' => $item->product_name,
+                                            'size' => '64px',
+                                            'iconClass' => 'bi-box-seam',
+                                        ])
+                                    </td>
                                     <td>{{ $item->product_name }}</td>
                                     <td>{{ $item->quantity }}</td>
                                     <td>
