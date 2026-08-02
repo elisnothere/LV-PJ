@@ -19,20 +19,24 @@
     <div class="row g-4">
         <div class="col-12 col-lg-6">
             <div class="card h-100">
-                @if ($product->primary_image_url)
-                    <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="card-img-top" style="height: 380px; object-fit: cover;">
-                @else
-                    <div class="bg-body-secondary d-flex align-items-center justify-content-center" style="height: 380px;">
-                        <i class="bi bi-box-seam display-1 text-secondary"></i>
-                    </div>
-                @endif
+                @include('partials.product-image', [
+                    'imageUrl' => $product->primary_image_url,
+                    'alt' => $product->name,
+                    'imageClass' => 'card-img-top',
+                    'style' => 'height: 380px; width: 100%; object-fit: cover;',
+                ])
 
                 @if ($product->images->count() > 1)
                     <div class="card-body border-top">
                         <div class="row g-2">
                             @foreach ($product->images as $image)
                                 <div class="col-4 col-md-3">
-                                    <img src="{{ $image->image_url }}" alt="{{ $product->name }}" class="img-fluid rounded border" style="height: 90px; width: 100%; object-fit: cover;">
+                                    @include('partials.product-image', [
+                                        'imageUrl' => $image->image_url,
+                                        'alt' => $product->name,
+                                        'imageClass' => 'img-fluid rounded border',
+                                        'style' => 'height: 90px; width: 100%; object-fit: cover;',
+                                    ])
                                 </div>
                             @endforeach
                         </div>

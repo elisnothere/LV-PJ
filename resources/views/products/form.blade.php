@@ -100,7 +100,12 @@
                     @foreach ($product->images as $image)
                         <div class="col-12 col-sm-6 col-lg-4">
                             <div class="border rounded p-2 h-100">
-                                <img src="{{ $image->image_url }}" alt="{{ $product->name }}" class="img-fluid rounded border mb-2" style="width: 100%; height: 140px; object-fit: cover;">
+                                @include('partials.product-image', [
+                                    'imageUrl' => $image->image_url,
+                                    'alt' => $product->name,
+                                    'imageClass' => 'img-fluid rounded border mb-2',
+                                    'style' => 'width: 100%; height: 140px; object-fit: cover;',
+                                ])
                                 <div class="form-check">
                                     <input type="radio" class="form-check-input" name="primary_image_id" id="primary_image_{{ $image->id }}" value="{{ $image->id }}" @checked((string) $selectedPrimaryImageId === (string) $image->id)>
                                     <label class="form-check-label" for="primary_image_{{ $image->id }}">Principal</label>

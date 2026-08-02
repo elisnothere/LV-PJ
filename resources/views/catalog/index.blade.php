@@ -104,13 +104,12 @@
             <div class="col-12 col-md-6 col-xl-4 mb-3">
                 <div class="card h-100">
                     <a href="{{ route('catalog.show', $product) }}" class="text-decoration-none text-reset">
-                        @if ($product->primary_image_url)
-                            <img src="{{ $product->primary_image_url }}" class="card-img-top" alt="{{ $product->name }}" style="height: 180px; object-fit: cover;">
-                        @else
-                            <div class="bg-body-secondary d-flex align-items-center justify-content-center" style="height: 180px;">
-                                <i class="bi bi-box-seam display-3 text-secondary"></i>
-                            </div>
-                        @endif
+                        @include('partials.product-image', [
+                            'imageUrl' => $product->primary_image_url,
+                            'alt' => $product->name,
+                            'imageClass' => 'card-img-top',
+                            'style' => 'height: 180px; width: 100%; object-fit: cover;',
+                        ])
                     </a>
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between gap-2">

@@ -360,11 +360,11 @@ it('shows a fallback placeholder when cart or checkout items do not have images'
 
     $cartResponse = $this->actingAs($user)->get(route('cart.index'));
     $cartResponse->assertOk();
-    $cartResponse->assertSee('bi-box-seam', false);
+    $cartResponse->assertSee('data:image/svg+xml', false);
 
     $checkoutResponse = $this->actingAs($user)->get(route('orders.checkout', ['shipping_city_id' => $shippingCity->id]));
     $checkoutResponse->assertOk();
-    $checkoutResponse->assertSee('bi-box-seam', false);
+    $checkoutResponse->assertSee('data:image/svg+xml', false);
 });
 
 it('does not apply a future or expired promotion', function () {
@@ -736,3 +736,4 @@ it('prevents deleting your own user through the management service', function ()
     $this->expectException(DomainException::class);
     $service->delete($user, $user->id);
 });
+

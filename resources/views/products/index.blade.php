@@ -33,13 +33,11 @@
                     @forelse ($products as $product)
                         <tr>
                             <td>
-                                @if ($product->primary_image_url)
-                                    <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="img-thumbnail" style="width: 56px; height: 56px; object-fit: cover;">
-                                @else
-                                    <div class="bg-body-secondary d-flex align-items-center justify-content-center rounded text-secondary" style="width: 56px; height: 56px;">
-                                        <i class="bi bi-box-seam"></i>
-                                    </div>
-                                @endif
+                                @include('partials.product-image', [
+                                    'imageUrl' => $product->primary_image_url,
+                                    'alt' => $product->name,
+                                    'size' => '56px',
+                                ])
                             </td>
                             <td>
                                 {{ $product->name }}
