@@ -1,7 +1,8 @@
-@extends('app')
+@extends('layouts.storefront')
 
 @section('title', 'Sistema - Categorias')
 @section('page-title', 'Categorias')
+@section('page-subtitle', 'Navega por familias de productos desde la tienda y, si eres admin, administra nombres desde aqui mismo.')
 
 @push('css')
     <link rel="stylesheet" href="{{ asset('css/mantenimiento.css') }}">
@@ -46,7 +47,7 @@
             <div class="row">
                 @forelse ($categories as $category)
                     <div class="col-12 col-md-6 col-xl-4 mb-3">
-                        <div class="border rounded p-3 h-100">
+                        <div class="border rounded p-3 h-100 bg-white">
                             <a href="{{ route('catalog.index', ['categoria' => $category->slug]) }}" class="text-decoration-none d-block mb-3">
                                 <div class="d-flex align-items-center gap-3">
                                     <i class="bi bi-tag fs-3 text-primary"></i>

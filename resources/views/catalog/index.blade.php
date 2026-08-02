@@ -1,7 +1,8 @@
-@extends('app')
+@extends('layouts.storefront')
 
 @section('title', 'Sistema - Catalogo')
 @section('page-title', 'Catalogo de productos Online')
+@section('page-subtitle', 'Explora el catalogo, filtra por categoria y compra desde un entorno pensado para clientes.')
 
 @push('css')
     <style>

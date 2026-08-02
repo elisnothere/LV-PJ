@@ -1,7 +1,8 @@
-@extends('app')
+@extends('layouts.storefront')
 
 @section('title', 'Sistema - Mis pedidos')
 @section('page-title', 'Mis pedidos')
+@section('page-subtitle', 'Consulta el historial de compras y entra al detalle de cada pedido desde tu cuenta.')
 
 @section('contenido')
     @if (session('success'))

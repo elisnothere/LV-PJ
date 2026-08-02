@@ -40,10 +40,7 @@
                         </a>
                     </li>
                     <li class="nav-item d-none d-md-block">
-                        <a href="{{ url('/') }}" class="nav-link">Inicio</a>
-                    </li>
-                    <li class="nav-item d-none d-md-block">
-                        <a href="{{ url('/contacto') }}" class="nav-link">Contacto</a>
+                        <a href="{{ route('dashboard') }}" class="nav-link">Dashboard</a>
                     </li>
                 </ul>
 
@@ -77,7 +74,7 @@
                                     </p>
                                 </li>
                                 <li class="user-footer">
-                                    <a href="{{ auth()->user()->role === 'admin' ? route('dashboard') : route('catalog.index') }}" class="btn btn-outline-secondary">Inicio</a>
+                                    <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary">Dashboard</a>
                                     <form action="{{ route('logout') }}" method="post" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-outline-danger float-end">Salir</button>
@@ -97,13 +94,13 @@
 
         <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
             <div class="sidebar-brand">
-                <a href="{{ route('home') }}" class="brand-link">
+                <a href="{{ route('dashboard') }}" class="brand-link">
                     <img
                         src="{{ asset('assets/img/AdminLTELogo.png') }}"
                         alt="AdminLTE Logo"
                         class="brand-image opacity-75 shadow"
                     />
-                    <span class="brand-text fw-light">Sistema</span>
+                    <span class="brand-text fw-light">Dashboard</span>
                 </a>
             </div>
 
@@ -113,14 +110,14 @@
                         class="nav sidebar-menu flex-column"
                         data-lte-toggle="treeview"
                         role="navigation"
-                        aria-label="Menu principal"
+                        aria-label="Menu administrativo"
                         data-accordion="false"
                         id="navigation"
                     >
                         <li class="nav-item">
-                            <a href="{{ route('home') }}" class="nav-link {{ request()->is('/') || request()->is('dashboard') ? 'active' : '' }}">
+                            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}">
                                 <i class="nav-icon bi bi-speedometer"></i>
-                                <p>Inicio</p>
+                                <p>Dashboard</p>
                             </a>
                         </li>
                         @if (auth()->check() && auth()->user()->role === 'admin')
@@ -130,14 +127,6 @@
                                     <p>Usuarios</p>
                                 </a>
                             </li>
-                        @endif
-                        <li class="nav-item">
-                            <a href="{{ url('/categoria') }}" class="nav-link {{ request()->is('categoria') ? 'active' : '' }}">
-                                <i class="nav-icon bi bi-tags"></i>
-                                <p>Categorias</p>
-                            </a>
-                        </li>
-                        @if (auth()->check() && auth()->user()->role === 'admin')
                             <li class="nav-item">
                                 <a href="{{ route('products.index') }}" class="nav-link {{ request()->is('products*') ? 'active' : '' }}">
                                     <i class="nav-icon bi bi-box-seam"></i>
@@ -150,28 +139,6 @@
                                     <p>Ciudades de envio</p>
                                 </a>
                             </li>
-                        @endif
-                        <li class="nav-item">
-                            <a href="{{ route('catalog.index') }}" class="nav-link {{ request()->is('catalogo*') ? 'active' : '' }}">
-                                <i class="nav-icon bi bi-shop"></i>
-                                <p>Catalogo</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('cart.index') }}" class="nav-link {{ request()->is('carrito') ? 'active' : '' }}">
-                                <i class="nav-icon bi bi-cart3"></i>
-                                <p>Carrito</p>
-                            </a>
-                        </li>
-                        @auth
-                            <li class="nav-item">
-                                <a href="{{ route('orders.mine') }}" class="nav-link {{ request()->is('mis-pedidos*') ? 'active' : '' }}">
-                                    <i class="nav-icon bi bi-bag-check"></i>
-                                    <p>Mis pedidos</p>
-                                </a>
-                            </li>
-                        @endauth
-                        @if (auth()->check() && auth()->user()->role === 'admin')
                             <li class="nav-item">
                                 <a href="{{ route('orders.index') }}" class="nav-link {{ request()->is('pedidos*') ? 'active' : '' }}">
                                     <i class="nav-icon bi bi-receipt"></i>
@@ -179,12 +146,6 @@
                                 </a>
                             </li>
                         @endif
-                        <li class="nav-item">
-                            <a href="{{ url('/contacto') }}" class="nav-link {{ request()->is('contacto') ? 'active' : '' }}">
-                                <i class="nav-icon bi bi-envelope"></i>
-                                <p>Contacto</p>
-                            </a>
-                        </li>
                     </ul>
                 </nav>
             </div>
@@ -199,7 +160,7 @@
                         </div>
                         <div class="col-sm-6">
                             <ol class="breadcrumb float-sm-end">
-                                <li class="breadcrumb-item"><a href="{{ url('/') }}">Inicio</a></li>
+                                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                                 <li class="breadcrumb-item active" aria-current="page">
                                     @yield('page-title', 'Panel')
                                 </li>

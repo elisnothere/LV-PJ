@@ -1,7 +1,8 @@
-@extends('app')
+@extends('layouts.storefront')
 
 @section('title', 'Sistema - Producto')
 @section('page-title', $product->name)
+@section('page-subtitle', 'Consulta el detalle, revisa el stock y completa tu compra desde la tienda.')
 
 @section('contenido')
     @if (session('success'))

@@ -1,7 +1,8 @@
-@extends('app')
+@extends(auth()->user()?->role === 'admin' ? 'app' : 'layouts.storefront')
 
 @section('title', 'Sistema - Pedido')
 @section('page-title', 'Pedido ' . $order->code)
+@section('page-subtitle', 'Detalle completo del pedido, productos incluidos y estado actual de la compra.')
 
 @section('contenido')
     @if (session('success'))

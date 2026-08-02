@@ -1,7 +1,8 @@
-@extends('app')
+@extends('layouts.storefront')
 
 @section('title', 'Sistema - Carrito')
 @section('page-title', 'Carrito de pedidos')
+@section('page-subtitle', 'Revisa tus productos, ajusta cantidades y continua hacia el checkout desde la tienda.')
 
 @section('contenido')
     @if (session('success'))

@@ -1,7 +1,8 @@
-@extends('app')
+@extends('layouts.storefront')
 
 @section('title', 'Sistema - Contacto')
 @section('page-title', 'Contacto')
+@section('page-subtitle', 'Canales directos para resolver dudas sobre productos, pedidos y entregas.')
 
 @section('contenido')
     <div class="card">

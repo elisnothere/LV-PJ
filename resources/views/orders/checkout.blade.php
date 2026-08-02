@@ -1,7 +1,8 @@
-@extends('app')
+@extends('layouts.storefront')
 
 @section('title', 'Sistema - Realizar pedido')
 @section('page-title', 'Realizar pedido')
+@section('page-subtitle', 'Confirma tu envio y revisa el resumen final antes de completar la compra.')
 
 @section('contenido')
     <div class="row g-4">
