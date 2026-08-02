@@ -101,6 +101,9 @@
                         <span class="text-muted">Se calcula en checkout</span>
                     @endif
                 </div>
+                @if ($selectedAddress)
+                    <div class="small text-muted">Direccion: {{ $selectedAddress->formattedAddress() }}</div>
+                @endif
                 <div><strong>Total:</strong> ${{ number_format($total, 2) }}</div>
             </div>
             <div class="ms-lg-auto">

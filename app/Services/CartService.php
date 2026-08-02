@@ -4,16 +4,19 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ShippingCity;
+use App\Models\UserAddress;
 use DomainException;
 use Illuminate\Session\Store;
 
 class CartService
 {
     private const SHIPPING_CITY_SESSION_KEY = 'checkout.shipping_city_id';
+    private const USER_ADDRESS_SESSION_KEY = 'checkout.user_address_id';
 
     public function __construct(
         private Store $session,
         private ShippingCityService $shippingCityService,
+        private UserAddressService $userAddressService,
     ) {
     }
 
@@ -78,6 +81,7 @@ class CartService
     {
         if ($shippingCityId) {
             $this->session->put(self::SHIPPING_CITY_SESSION_KEY, $shippingCityId);
+            $this->session->forget(self::USER_ADDRESS_SESSION_KEY);
 
             return;
         }
@@ -85,21 +89,51 @@ class CartService
         $this->session->forget(self::SHIPPING_CITY_SESSION_KEY);
     }
 
-    public function selectedShippingCity(?int $shippingCityId = null): ?ShippingCity
+    public function selectedAddressId(): ?int
     {
-        $shippingCityId ??= $this->selectedShippingCityId();
+        $value = $this->session->get(self::USER_ADDRESS_SESSION_KEY);
 
-        return $this->shippingCityService->findActiveOrNull($shippingCityId);
+        return is_numeric($value) ? (int) $value : null;
     }
 
-    public function shippingCost(?int $shippingCityId = null): float
+    public function setSelectedAddressId(?int $userAddressId): void
     {
-        return (float) ($this->selectedShippingCity($shippingCityId)?->shipping_cost ?? 0);
+        if ($userAddressId) {
+            $this->session->put(self::USER_ADDRESS_SESSION_KEY, $userAddressId);
+            $this->session->forget(self::SHIPPING_CITY_SESSION_KEY);
+
+            return;
+        }
+
+        $this->session->forget(self::USER_ADDRESS_SESSION_KEY);
     }
 
-    public function totalWithShipping(?int $shippingCityId = null): float
+    public function selectedAddress(?int $userId = null, ?int $userAddressId = null): ?UserAddress
     {
-        return $this->subtotal() + $this->shippingCost($shippingCityId);
+        $userAddressId ??= $this->selectedAddressId();
+
+        return $this->userAddressService->findOwnedActiveOrNull($userAddressId, $userId);
+    }
+
+    public function selectedShippingCity(?int $userId = null): ?ShippingCity
+    {
+        $selectedAddress = $this->selectedAddress($userId);
+
+        if ($selectedAddress) {
+            return $selectedAddress->shippingCity;
+        }
+
+        return $this->shippingCityService->findActiveOrNull($this->selectedShippingCityId());
+    }
+
+    public function shippingCost(?int $userId = null): float
+    {
+        return (float) ($this->selectedShippingCity($userId)?->shipping_cost ?? 0);
+    }
+
+    public function totalWithShipping(?int $userId = null): float
+    {
+        return $this->subtotal() + $this->shippingCost($userId);
     }
 
     public function add(Product $product, int $quantity): void
@@ -149,5 +183,6 @@ class CartService
     {
         $this->session->forget('cart');
         $this->session->forget(self::SHIPPING_CITY_SESSION_KEY);
+        $this->session->forget(self::USER_ADDRESS_SESSION_KEY);
     }
 }

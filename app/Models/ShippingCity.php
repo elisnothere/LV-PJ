@@ -26,4 +26,10 @@ class ShippingCity extends Model
         return $this->hasMany(Order::class)
             ->orderByDesc('created_at');
     }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(UserAddress::class)
+            ->orderByDesc('created_at');
+    }
 }

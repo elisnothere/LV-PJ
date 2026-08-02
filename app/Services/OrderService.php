@@ -11,24 +11,49 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
-    public function __construct(private ShippingCityService $shippingCityService)
-    {
+    public function __construct(
+        private ShippingCityService $shippingCityService,
+        private UserAddressService $userAddressService,
+    ) {
     }
 
-    public function createFromCart(array $cart, array $orderData, ?int $userId, int $shippingCityId): Order
-    {
+    public function createFromCart(
+        array $cart,
+        array $orderData,
+        ?int $userId,
+        ?int $shippingCityId = null,
+        ?int $userAddressId = null,
+    ): Order {
         if (empty($cart)) {
             throw new DomainException('El carrito esta vacio.');
         }
 
-        return DB::transaction(function () use ($cart, $orderData, $userId, $shippingCityId) {
-            $shippingCity = $this->shippingCityService->resolveActiveOrFail($shippingCityId);
+        return DB::transaction(function () use ($cart, $orderData, $userId, $shippingCityId, $userAddressId) {
+            $userAddress = $userAddressId
+                ? $this->userAddressService->resolveOwnedActiveOrFail($userAddressId, $userId)
+                : null;
+
+            if ($userAddress) {
+                $shippingCity = $userAddress->shippingCity;
+                $deliveryAddressLine1 = $userAddress->primary_address;
+                $deliveryAddressLine2 = $userAddress->secondary_address;
+                $deliveryAddress = $userAddress->formattedAddress();
+            } else {
+                $shippingCity = $this->shippingCityService->resolveActiveOrFail($shippingCityId);
+                $deliveryAddressLine1 = (string) ($orderData['delivery_address'] ?? '');
+                $deliveryAddressLine2 = null;
+                $deliveryAddress = $deliveryAddressLine1;
+            }
 
             $order = Order::create([
                 ...$orderData,
                 'user_id' => $userId,
                 'shipping_city_id' => $shippingCity->id,
+                'user_address_id' => $userAddress?->id,
                 'shipping_city_name' => $shippingCity->name,
+                'delivery_address' => $deliveryAddress,
+                'delivery_address_line_1' => $deliveryAddressLine1,
+                'delivery_address_line_2' => $deliveryAddressLine2,
                 'code' => 'PED-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6)),
                 'status' => Order::STATUSES[0],
                 'subtotal' => 0,

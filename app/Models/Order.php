@@ -15,10 +15,13 @@ class Order extends Model
         'code',
         'user_id',
         'shipping_city_id',
+        'user_address_id',
         'customer_name',
         'customer_email',
         'customer_phone',
         'delivery_address',
+        'delivery_address_line_1',
+        'delivery_address_line_2',
         'shipping_city_name',
         'status',
         'subtotal',
@@ -43,6 +46,11 @@ class Order extends Model
     public function shippingCity(): BelongsTo
     {
         return $this->belongsTo(ShippingCity::class);
+    }
+
+    public function userAddress(): BelongsTo
+    {
+        return $this->belongsTo(UserAddress::class);
     }
 
     public function items(): HasMany

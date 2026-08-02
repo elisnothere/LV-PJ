@@ -15,12 +15,23 @@ class CartController extends Controller
 
     public function index()
     {
+        $selectedAddress = auth()->check()
+            ? $this->cartService->selectedAddress((int) auth()->id())
+            : null;
+
         return view('cart.index', [
             'cart' => $this->cartService->contents(),
-            'selectedShippingCity' => $this->cartService->selectedShippingCity(),
+            'selectedAddress' => $selectedAddress,
+            'selectedShippingCity' => auth()->check()
+                ? $this->cartService->selectedShippingCity((int) auth()->id())
+                : $this->cartService->selectedShippingCity(),
             'subtotal' => $this->cartService->subtotal(),
-            'shippingCost' => $this->cartService->shippingCost(),
-            'total' => $this->cartService->totalWithShipping(),
+            'shippingCost' => auth()->check()
+                ? $this->cartService->shippingCost((int) auth()->id())
+                : $this->cartService->shippingCost(),
+            'total' => auth()->check()
+                ? $this->cartService->totalWithShipping((int) auth()->id())
+                : $this->cartService->totalWithShipping(),
         ]);
     }
 

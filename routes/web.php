@@ -10,6 +10,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShippingCityController;
+use App\Http\Controllers\UserAddressController;
 use App\Http\Controllers\UserController;
 
 Route::get('/', HomeController::class)->name('home');
@@ -51,6 +52,13 @@ Route::delete('/carrito/{product}', [CartController::class, 'remove'])->name('ca
 Route::delete('/carrito', [CartController::class, 'clear'])->name('cart.clear');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/mis-direcciones', [UserAddressController::class, 'index'])->name('addresses.index');
+    Route::get('/mis-direcciones/create', [UserAddressController::class, 'create'])->name('addresses.create');
+    Route::post('/mis-direcciones', [UserAddressController::class, 'store'])->name('addresses.store');
+    Route::get('/mis-direcciones/{address}/edit', [UserAddressController::class, 'edit'])->name('addresses.edit');
+    Route::put('/mis-direcciones/{address}', [UserAddressController::class, 'update'])->name('addresses.update');
+    Route::delete('/mis-direcciones/{address}', [UserAddressController::class, 'destroy'])->name('addresses.destroy');
+
     Route::get('/pedidos/checkout', [OrderController::class, 'checkout'])->name('orders.checkout');
     Route::post('/pedidos', [OrderController::class, 'store'])->name('orders.store');
     Route::get('/mis-pedidos', [OrderController::class, 'mine'])->name('orders.mine');

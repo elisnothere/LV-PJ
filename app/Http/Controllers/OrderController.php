@@ -8,7 +8,7 @@ use App\Models\Order;
 use App\Services\CartService;
 use App\Services\OrderQueryService;
 use App\Services\OrderService;
-use App\Services\ShippingCityService;
+use App\Services\UserAddressService;
 use DomainException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
@@ -19,12 +19,20 @@ class OrderController extends Controller
         private CartService $cartService,
         private OrderService $orderService,
         private OrderQueryService $orderQueryService,
-        private ShippingCityService $shippingCityService,
+        private UserAddressService $userAddressService,
     ) {
     }
 
     public function checkout(Request $request)
     {
+        if ($request->exists('user_address_id')) {
+            $selectedId = $request->filled('user_address_id')
+                ? (int) $request->integer('user_address_id')
+                : null;
+
+            $this->cartService->setSelectedAddressId($selectedId);
+        }
+
         if ($request->exists('shipping_city_id')) {
             $selectedId = $request->filled('shipping_city_id')
                 ? (int) $request->integer('shipping_city_id')
@@ -33,7 +41,12 @@ class OrderController extends Controller
             $this->cartService->setShippingCityId($selectedId);
         }
 
-        $selectedShippingCity = $this->cartService->selectedShippingCity();
+        $selectedAddress = $this->cartService->selectedAddress((int) auth()->id());
+        $selectedShippingCity = $this->cartService->selectedShippingCity((int) auth()->id());
+
+        if ($this->cartService->selectedAddressId() && ! $selectedAddress) {
+            $this->cartService->setSelectedAddressId(null);
+        }
 
         if ($this->cartService->selectedShippingCityId() && ! $selectedShippingCity) {
             $this->cartService->setShippingCityId(null);
@@ -41,11 +54,12 @@ class OrderController extends Controller
 
         return view('orders.checkout', [
             'cart' => $this->cartService->contents(),
-            'shippingCities' => $this->shippingCityService->active(),
+            'addresses' => $this->userAddressService->forUser((int) auth()->id()),
+            'selectedAddress' => $selectedAddress,
             'selectedShippingCity' => $selectedShippingCity,
             'subtotal' => $this->cartService->subtotal(),
-            'shippingCost' => $this->cartService->shippingCost(),
-            'total' => $this->cartService->totalWithShipping(),
+            'shippingCost' => $this->cartService->shippingCost((int) auth()->id()),
+            'total' => $this->cartService->totalWithShipping((int) auth()->id()),
         ]);
     }
 
@@ -56,7 +70,8 @@ class OrderController extends Controller
                 $this->cartService->contents(),
                 $request->orderData(),
                 auth()->id(),
-                $request->shippingCityId(),
+                shippingCityId: $request->shippingCityId(),
+                userAddressId: $request->userAddressId(),
             );
         } catch (DomainException $exception) {
             return redirect()->route('catalog.index')->with('error', $exception->getMessage());

@@ -67,7 +67,10 @@
                     <p class="mb-1"><strong>Nombre:</strong> {{ $order->customer_name }}</p>
                     <p class="mb-1"><strong>Correo:</strong> {{ $order->customer_email }}</p>
                     <p class="mb-1"><strong>Telefono:</strong> {{ $order->customer_phone ?: 'No registrado' }}</p>
-                    <p class="mb-1"><strong>Direccion:</strong> {{ $order->delivery_address }}</p>
+                    <p class="mb-1"><strong>Direccion:</strong> {{ $order->delivery_address_line_1 ?: $order->delivery_address }}</p>
+                    @if ($order->delivery_address_line_2)
+                        <p class="mb-1"><strong>Complemento:</strong> {{ $order->delivery_address_line_2 }}</p>
+                    @endif
                     <p class="mb-0"><strong>Ciudad de envio:</strong> {{ $order->shipping_city_name ?: 'No registrada' }}</p>
                 </div>
             </div>

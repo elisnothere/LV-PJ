@@ -8,30 +8,41 @@
     <div class="row g-4">
         <div class="col-12 col-lg-7">
             <div class="card card-primary card-outline mb-4">
-                <div class="card-header">
-                    <h3 class="card-title">Envio</h3>
+                <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                    <h3 class="card-title mb-0">Envio</h3>
+                    <a href="{{ route('addresses.create') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        Nueva direccion
+                    </a>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('orders.checkout') }}" method="get" class="row g-3 align-items-end">
-                        <div class="col-12 col-md-8">
-                            <label for="shipping_city_id" class="form-label">Ciudad de envio</label>
-                            <select id="shipping_city_id" name="shipping_city_id" class="form-select">
-                                <option value="">Seleccione una ciudad</option>
-                                @foreach ($shippingCities as $shippingCity)
-                                    <option value="{{ $shippingCity->id }}" @selected(old('shipping_city_id', $selectedShippingCity?->id) == $shippingCity->id)>
-                                        {{ $shippingCity->name }} - ${{ number_format($shippingCity->shipping_cost, 2) }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('shipping_city_id') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                    @if ($addresses->isEmpty())
+                        <div class="alert alert-warning mb-0">
+                            Necesitas guardar al menos una direccion para continuar con la compra.
+                            <a href="{{ route('addresses.create') }}" class="alert-link">Crear direccion</a>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <button type="submit" class="btn btn-outline-primary w-100">
-                                <i class="bi bi-arrow-repeat me-1"></i>
-                                Actualizar envio
-                            </button>
-                        </div>
-                    </form>
+                    @else
+                        <form action="{{ route('orders.checkout') }}" method="get" class="row g-3 align-items-end">
+                            <div class="col-12 col-md-8">
+                                <label for="user_address_id" class="form-label">Direccion guardada</label>
+                                <select id="user_address_id" name="user_address_id" class="form-select @error('user_address_id') is-invalid @enderror">
+                                    <option value="">Seleccione una direccion</option>
+                                    @foreach ($addresses as $address)
+                                        <option value="{{ $address->id }}" @selected(old('user_address_id', $selectedAddress?->id) == $address->id)>
+                                            {{ $address->formattedAddress() }} ({{ $address->shippingCity->name }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('user_address_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-arrow-repeat me-1"></i>
+                                    Actualizar envio
+                                </button>
+                            </div>
+                        </form>
+                    @endif
                 </div>
             </div>
 
@@ -41,7 +52,11 @@
                 </div>
                 <form action="{{ route('orders.store') }}" method="post">
                     @csrf
-                    <input type="hidden" name="shipping_city_id" value="{{ old('shipping_city_id', $selectedShippingCity?->id) }}">
+                    @if ($selectedAddress)
+                        <input type="hidden" name="user_address_id" value="{{ $selectedAddress->id }}">
+                    @elseif ($selectedShippingCity)
+                        <input type="hidden" name="shipping_city_id" value="{{ $selectedShippingCity->id }}">
+                    @endif
                     <div class="card-body">
                         @if ($errors->any())
                             <div class="alert alert-danger">
@@ -51,6 +66,26 @@
                                 @enderror
                             </div>
                         @endif
+
+                        <div class="mb-3">
+                            <label class="form-label">Direccion seleccionada</label>
+                            @if ($selectedAddress)
+                                <div class="border rounded p-3 bg-body-tertiary">
+                                    <div class="fw-semibold">{{ $selectedAddress->primary_address }}</div>
+                                    @if ($selectedAddress->secondary_address)
+                                        <div class="text-secondary">{{ $selectedAddress->secondary_address }}</div>
+                                    @endif
+                                    <div class="small text-muted mt-2">{{ $selectedAddress->shippingCity->name }}</div>
+                                </div>
+                            @elseif ($selectedShippingCity)
+                                <div class="border rounded p-3 bg-body-tertiary">
+                                    <div class="fw-semibold">Direccion legacy ingresada manualmente</div>
+                                    <div class="small text-muted mt-2">{{ $selectedShippingCity->name }}</div>
+                                </div>
+                            @else
+                                <div class="alert alert-info mb-0">Selecciona una direccion guardada para continuar.</div>
+                            @endif
+                        </div>
 
                         <div class="mb-3">
                             <label for="customer_name" class="form-label">Nombre</label>
@@ -67,14 +102,9 @@
                             <input type="text" class="form-control @error('customer_phone') is-invalid @enderror" id="customer_phone" name="customer_phone" value="{{ old('customer_phone') }}">
                             @error('customer_phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
-                        <div class="mb-3">
-                            <label for="delivery_address" class="form-label">Direccion de entrega</label>
-                            <textarea class="form-control @error('delivery_address') is-invalid @enderror" id="delivery_address" name="delivery_address" rows="4">{{ old('delivery_address') }}</textarea>
-                            @error('delivery_address') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
                     </div>
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary" @disabled(empty($cart))>
+                        <button type="submit" class="btn btn-primary" @disabled(empty($cart) || (! $selectedAddress && ! $selectedShippingCity))>
                             <i class="bi bi-check2-circle me-1"></i>
                             Confirmar pedido
                         </button>
@@ -120,7 +150,10 @@
                         <span>Envio</span>
                         <strong>${{ number_format($shippingCost, 2) }}</strong>
                     </div>
-                    @if ($selectedShippingCity)
+                    @if ($selectedAddress)
+                        <div class="small text-muted mb-2">Direccion seleccionada: {{ $selectedAddress->formattedAddress() }}</div>
+                        <div class="small text-muted mb-2">Ciudad seleccionada: {{ $selectedAddress->shippingCity->name }}</div>
+                    @elseif ($selectedShippingCity)
                         <div class="small text-muted mb-2">Ciudad seleccionada: {{ $selectedShippingCity->name }}</div>
                     @endif
                     <div class="d-flex justify-content-between">

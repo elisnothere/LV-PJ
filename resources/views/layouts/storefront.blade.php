@@ -140,6 +140,11 @@
 
         if (auth()->check()) {
             $storefrontLinks[] = [
+                'label' => 'Mis direcciones',
+                'route' => route('addresses.index'),
+                'active' => request()->is('mis-direcciones*'),
+            ];
+            $storefrontLinks[] = [
                 'label' => 'Mis pedidos',
                 'route' => route('orders.mine'),
                 'active' => request()->is('mis-pedidos*'),
@@ -179,6 +184,7 @@
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><span class="dropdown-item-text text-secondary small">{{ auth()->user()->email }}</span></li>
                                     <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ route('addresses.index') }}">Mis direcciones</a></li>
                                     <li><a class="dropdown-item" href="{{ route('orders.mine') }}">Mis pedidos</a></li>
                                     <li>
                                         <form action="{{ route('logout') }}" method="post">
