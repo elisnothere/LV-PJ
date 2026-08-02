@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Contracts\ProductSourceAdapter;
 use App\Data\NormalizedProductData;
 use App\Jobs\DownloadProductImageJob;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductSourceMapping;
@@ -15,6 +16,10 @@ use Throwable;
 
 class ProductImportService
 {
+    public function __construct(private CategoryService $categoryService)
+    {
+    }
+
     public function import(ProductSourceAdapter $adapter): array
     {
         $stats = [
@@ -77,8 +82,9 @@ class ProductImportService
     private function upsertProduct(NormalizedProductData $normalized): array
     {
         $checksum = $this->checksum($normalized);
+        $category = $this->categoryService->resolveByName($normalized->categoryName);
         $mapping = ProductSourceMapping::query()
-            ->with('product')
+            ->with('product.category')
             ->where('source', $normalized->source)
             ->where('external_id', $normalized->externalId)
             ->first();
@@ -92,8 +98,8 @@ class ProductImportService
                 throw new \RuntimeException('Source mapping exists without a linked product.');
             }
 
-            if ($mapping->checksum !== $checksum || $this->productNeedsUpdate($product, $normalized)) {
-                $this->fillProduct($product, $normalized)->save();
+            if ($mapping->checksum !== $checksum || $this->productNeedsUpdate($product, $normalized, $category)) {
+                $this->fillProduct($product, $normalized, $category)->save();
                 $status = 'updated';
             }
 
@@ -106,7 +112,7 @@ class ProductImportService
             $product = new Product();
             $status = 'created';
 
-            $this->fillProduct($product, $normalized)->save();
+            $this->fillProduct($product, $normalized, $category)->save();
 
             $product->sourceMappings()->create([
                 'source' => $normalized->source,
@@ -126,11 +132,11 @@ class ProductImportService
         ];
     }
 
-    private function fillProduct(Product $product, NormalizedProductData $normalized): Product
+    private function fillProduct(Product $product, NormalizedProductData $normalized, Category $category): Product
     {
         $product->fill([
             'name' => $normalized->title,
-            'category' => $normalized->categoryName,
+            'category_id' => $category->id,
             'description' => $normalized->description,
             'price' => number_format($normalized->priceAmount, 2, '.', ''),
             'stock' => max(0, $normalized->stock),
@@ -140,13 +146,15 @@ class ProductImportService
             'vendor' => $normalized->vendor,
         ]);
 
+        $product->setRelation('category', $category);
+
         return $product;
     }
 
-    private function productNeedsUpdate(Product $product, NormalizedProductData $normalized): bool
+    private function productNeedsUpdate(Product $product, NormalizedProductData $normalized, Category $category): bool
     {
         return $product->name !== $normalized->title
-            || $product->category !== $normalized->categoryName
+            || $product->category_id !== $category->id
             || $product->description !== $normalized->description
             || (string) $product->price !== number_format($normalized->priceAmount, 2, '.', '')
             || $product->vendor !== $normalized->vendor

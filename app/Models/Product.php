@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
@@ -11,7 +12,7 @@ class Product extends Model
 {
     protected $fillable = [
         'name',
-        'category',
+        'category_id',
         'description',
         'price',
         'stock',
@@ -28,6 +29,11 @@ class Product extends Model
             'price' => 'decimal:2',
             'active' => 'boolean',
         ];
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function images(): HasMany

@@ -15,9 +15,24 @@
         </div>
 
         <div class="form-group col-12 col-md-6 mb-3">
-            <label for="category">Categoria</label>
-            <input type="text" class="form-control @error('category') is-invalid @enderror" id="category" name="category" value="{{ old('category', $product->category ?? '') }}">
-            @error('category') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <label for="category_id">Categoria existente</label>
+            @php
+                $selectedCategoryId = old('category_id', $product->category_id ?? '');
+            @endphp
+            <select class="form-select @error('category_id') is-invalid @enderror" id="category_id" name="category_id">
+                <option value="">Seleccione una categoria</option>
+                @foreach ($categories as $category)
+                    <option value="{{ $category->id }}" @selected((string) $selectedCategoryId === (string) $category->id)>{{ $category->name }}</option>
+                @endforeach
+            </select>
+            @error('category_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <small class="text-secondary">Seleccione una categoria existente o escriba una nueva abajo.</small>
+        </div>
+
+        <div class="form-group col-12 mb-3">
+            <label for="new_category_name">Nueva categoria</label>
+            <input type="text" class="form-control @error('new_category_name') is-invalid @enderror" id="new_category_name" name="new_category_name" value="{{ old('new_category_name') }}" placeholder="Ej.: Electronica premium">
+            @error('new_category_name') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
         <div class="form-group col-12 col-md-4 mb-3">

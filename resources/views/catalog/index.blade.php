@@ -85,7 +85,7 @@
                     <select class="form-select" id="categoria" name="categoria">
                         <option value="">Todas</option>
                         @foreach ($categories as $category)
-                            <option value="{{ $category }}" @selected(request('categoria') === $category)>{{ $category }}</option>
+                            <option value="{{ $category->slug }}" @selected(request('categoria') === $category->slug || request('categoria') === $category->name)>{{ $category->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -113,7 +113,7 @@
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between gap-2">
                             <h5 class="card-title">{{ $product->name }}</h5>
-                            <span class="badge text-bg-info align-self-start">{{ $product->category }}</span>
+                            <span class="badge text-bg-info align-self-start">{{ $product->category?->name ?? 'Sin categoria' }}</span>
                         </div>
                         <p class="card-text text-secondary">{{ $product->description ?: 'Sin descripcion.' }}</p>
                         <div class="mt-auto">
@@ -144,7 +144,3 @@
         {{ $products->links('pagination::bootstrap-5') }}
     </div>
 @endsection
-
-
-
-

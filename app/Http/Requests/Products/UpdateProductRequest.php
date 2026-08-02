@@ -18,10 +18,9 @@ class UpdateProductRequest extends FormRequest
     {
         return array_merge([
             'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:0'],
             'stock' => ['required', 'integer', 'min:0'],
-        ], $this->imageUrlRules());
+        ], $this->categoryRules(), $this->imageUrlRules());
     }
 }

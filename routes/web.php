@@ -26,7 +26,7 @@ Route::get('/hola', function () {
     return 'Hola mundo';
 });
 
-Route::get('/categoria', [CatalogController::class, 'categories']);
+Route::get('/categoria', [CatalogController::class, 'categories'])->name('categories.index');
 Route::view('/contacto', 'contacto');
 
 Route::get('test', function () {
@@ -62,6 +62,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'usuario']);
 
     Route::resource('products', ProductController::class)->except(['show']);
+    Route::post('/categoria', [CatalogController::class, 'storeCategory'])->name('categories.store');
+    Route::patch('/categoria/{category}', [CatalogController::class, 'updateCategory'])->name('categories.update');
 
     Route::get('/pedidos', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/pedidos/{order}', [OrderController::class, 'show'])->name('orders.show');
