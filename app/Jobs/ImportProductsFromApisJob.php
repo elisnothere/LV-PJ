@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\ProductSourceRegistry;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -11,10 +12,10 @@ class ImportProductsFromApisJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public function handle(): void
+    public function handle(ProductSourceRegistry $productSourceRegistry): void
     {
-        ImportFreeEcommerceProductsJob::dispatch();
-        ImportEscuelaJsProductsJob::dispatch();
-        ImportRouteMisrProductsJob::dispatch();
+        foreach ($productSourceRegistry->sources() as $source) {
+            ImportProductSourceJob::dispatch($source);
+        }
     }
 }

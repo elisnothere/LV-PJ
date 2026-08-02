@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -23,10 +24,17 @@ return new class extends Migration
             ->orderBy('id')
             ->get()
             ->each(function ($product) {
+                $canonical = Str::of((string) $product->name)
+                    ->lower()
+                    ->ascii()
+                    ->replaceMatches('/[^a-z0-9]+/', '-')
+                    ->trim('-')
+                    ->value();
+
                 DB::table('products')
                     ->where('id', $product->id)
                     ->update([
-                        'canonical_key' => \App\Models\Product::makeCanonicalKey($product->name),
+                        'canonical_key' => $canonical !== '' ? $canonical : 'producto-sin-nombre',
                     ]);
             });
     }

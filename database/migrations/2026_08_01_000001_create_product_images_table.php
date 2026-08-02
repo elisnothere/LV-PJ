@@ -25,10 +25,12 @@ return new class extends Migration
             ->orderBy('id')
             ->get(['id', 'image_url', 'created_at', 'updated_at'])
             ->each(function ($product) {
+                $source = str_starts_with((string) $product->image_url, '/storage/productos/') ? 'upload' : 'url';
+
                 DB::table('product_images')->insert([
                     'product_id' => $product->id,
                     'image_url' => $product->image_url,
-                    'source' => str_starts_with($product->image_url, '/storage/productos/') ? 'upload' : 'url',
+                    'source' => $source,
                     'is_primary' => true,
                     'sort_order' => 1,
                     'created_at' => $product->created_at ?? now(),

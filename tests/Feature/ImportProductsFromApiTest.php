@@ -2,11 +2,9 @@
 
 use App\Contracts\ProductSourceAdapter;
 use App\Data\NormalizedProductData;
-use App\Jobs\DownloadProductImageJob;
-use App\Jobs\ImportEscuelaJsProductsJob;
-use App\Jobs\ImportFreeEcommerceProductsJob;
+use App\Jobs\ImportProductSourceJob;
 use App\Jobs\ImportProductsFromApisJob;
-use App\Jobs\ImportRouteMisrProductsJob;
+use App\Jobs\SyncImportedProductImagesJob;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -84,7 +82,7 @@ function failingAdapter(string $source): ProductSourceAdapter
     };
 }
 
-it('imports free ecommerce products and queues local image downloads', function () {
+it('imports free ecommerce products and queues local image sync after the product is persisted', function () {
     Queue::fake();
 
     $service = app(ProductImportService::class);
@@ -116,19 +114,16 @@ it('imports free ecommerce products and queues local image downloads', function 
         ->and($stats['images_dispatched'])->toBe(1)
         ->and(Product::count())->toBe(1)
         ->and(ProductSourceMapping::count())->toBe(1)
-        ->and(ProductImage::count())->toBe(1)
+        ->and(ProductImage::count())->toBe(0)
         ->and(Category::count())->toBe(1);
 
     $product = Product::with('category')->first();
-    $image = ProductImage::first();
 
     expect($product->name)->toBe('Hydrating Facial Moisturizer')
         ->and($product->category?->name)->toBe('Beauty')
-        ->and($product->primary_source)->toBe('free_ecommerce')
-        ->and($image->external_url)->toBe('https://example.com/moisturizer.jpg')
-        ->and($image->source)->toBe('imported_local');
+        ->and($product->primary_source)->toBe('free_ecommerce');
 
-    Queue::assertPushed(DownloadProductImageJob::class, 1);
+    Queue::assertPushed(SyncImportedProductImagesJob::class, fn ($job) => $job->productId === $product->id && $job->source === 'free_ecommerce');
 });
 
 it('imports route misr products with normalized category vendor and stock', function () {
@@ -167,14 +162,15 @@ it('imports route misr products with normalized category vendor and stock', func
     $product = Product::with('category')->first();
 
     expect($stats['created'])->toBe(1)
-        ->and(ProductImage::count())->toBe(2)
+        ->and($stats['images_dispatched'])->toBe(2)
+        ->and(ProductImage::count())->toBe(0)
         ->and($product->vendor)->toBe('Route')
         ->and($product->category?->name)->toBe('Electronics')
         ->and($product->stock)->toBe(7)
         ->and($product->primary_source)->toBe('route_misr');
 });
 
-it('does not duplicate products mappings or categories on reimport', function () {
+it('does not duplicate products mappings or categories on reimport from the same source', function () {
     Queue::fake();
 
     $service = app(ProductImportService::class);
@@ -206,21 +202,20 @@ it('does not duplicate products mappings or categories on reimport', function ()
 
     expect(Product::count())->toBe(1)
         ->and(ProductSourceMapping::count())->toBe(1)
-        ->and(ProductImage::count())->toBe(1)
         ->and(Category::count())->toBe(1)
         ->and($stats['unchanged'])->toBe(1);
 });
 
-it('reuses the same category entity for semantically equivalent imported names', function () {
+it('deduplicates equivalent imported products across different sources instead of duplicating the catalog', function () {
     Queue::fake();
 
     $service = app(ProductImportService::class);
 
     $service->import(fakeAdapter('free_ecommerce', [[
         'id' => 'cat-1',
-        'name' => 'Auriculares',
+        'name' => 'Auriculares Pro',
         'description' => 'Uno',
-        'category' => 'Electronics & Gadgets',
+        'category' => 'Electronics',
         'priceCents' => 1000,
         'image' => 'https://example.com/a.jpg',
     ]], function (array $payload, string $source) {
@@ -239,33 +234,33 @@ it('reuses the same category entity for semantically equivalent imported names',
         );
     }));
 
-    $service->import(fakeAdapter('route_misr', [[
+    $stats = $service->import(fakeAdapter('escuelajs', [[
         'id' => 'cat-2',
-        'title' => 'Camara',
+        'title' => 'Auriculares Pro',
         'description' => 'Dos',
-        'price' => 1200,
-        'quantity' => 2,
-        'imageCover' => 'https://example.com/b.jpg',
-        'images' => [],
-        'brand' => ['name' => 'Route'],
-        'subcategory' => ['category' => ['name' => ' electronics gadgets ']],
+        'price' => 10,
+        'images' => ['https://example.com/b.jpg'],
+        'category' => ['name' => 'Electronics'],
     ]], function (array $payload, string $source) {
         return new NormalizedProductData(
             source: $source,
             externalId: (string) $payload['id'],
             title: $payload['title'],
             description: $payload['description'],
-            categoryName: $payload['subcategory']['category']['name'],
+            categoryName: $payload['category']['name'],
             priceAmount: (float) $payload['price'],
             currency: 'USD',
-            vendor: $payload['brand']['name'],
-            stock: (int) $payload['quantity'],
-            imageUrls: [$payload['imageCover']],
+            vendor: null,
+            stock: 0,
+            imageUrls: $payload['images'],
             rawPayload: $payload,
         );
     }));
 
-    expect(Category::count())->toBe(1);
+    expect(Product::count())->toBe(1)
+        ->and(ProductSourceMapping::count())->toBe(2)
+        ->and(Category::count())->toBe(1)
+        ->and($stats['updated'])->toBe(1);
 });
 
 it('never overwrites a manually created product with an imported one', function () {
@@ -456,10 +451,12 @@ it('retries route misr source fetches after a 429 response', function () {
     Http::assertSentCount(2);
 });
 
-it('downloads imported images locally without redownloading existing files', function () {
+it('downloads imported images locally validates them and avoids redownloading existing files', function () {
     Storage::fake('public');
+    $tinyPng = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN6kAAAAASUVORK5CYII=');
+
     Http::fake([
-        'https://i.imgur.com/R3iobJA.jpeg' => Http::response('image-bytes', 200, ['Content-Type' => 'image/jpeg']),
+        'https://i.imgur.com/R3iobJA.jpeg' => Http::response($tinyPng, 200, ['Content-Type' => 'image/png']),
     ]);
 
     $product = Product::create([
@@ -473,26 +470,126 @@ it('downloads imported images locally without redownloading existing files', fun
         'primary_source' => 'escuelajs',
     ]);
 
-    $image = $product->images()->create([
-        'image_url' => '',
-        'external_url' => 'https://i.imgur.com/R3iobJA.jpeg',
+    $job = new SyncImportedProductImagesJob($product->id, 'escuelajs', ['https://i.imgur.com/R3iobJA.jpeg']);
+    $job->handle();
+    $job->handle();
+
+    $image = ProductImage::first();
+    $product->refresh();
+
+    expect($image)->not->toBeNull()
+        ->and($image->image_url)->toStartWith('/storage/productos/importados/'.$product->id.'/')
+        ->and($product->image_url)->toBe($image->image_url);
+
+    Http::assertSentCount(1);
+    Storage::disk('public')->assertExists(str_replace('/storage/', '', $image->image_url));
+});
+
+it('skips invalid downloaded files instead of storing them as imported images', function () {
+    Storage::fake('public');
+    Http::fake([
+        'https://example.com/not-image.jpg' => Http::response('not-an-image', 200, ['Content-Type' => 'text/plain']),
+    ]);
+
+    $product = Product::create([
+        'name' => 'Bad Image Product',
+        'category_id' => importTestCategory('Accessories')->id,
+        'description' => 'Bad',
+        'price' => 10,
+        'stock' => 0,
+        'active' => true,
+        'primary_source' => 'escuelajs',
+    ]);
+
+    (new SyncImportedProductImagesJob($product->id, 'escuelajs', ['https://example.com/not-image.jpg']))->handle();
+
+    expect(ProductImage::count())->toBe(0)
+        ->and($product->fresh()->image_url)->toBeNull();
+});
+
+it('does not let imported image sync overwrite manual image management', function () {
+    Queue::fake();
+
+    $product = Product::create([
+        'name' => 'Managed Product',
+        'category_id' => importTestCategory('Accessories')->id,
+        'description' => 'Managed',
+        'price' => 10,
+        'stock' => 0,
+        'active' => true,
+        'canonical_key' => 'managed-product',
+        'primary_source' => 'free_ecommerce',
+    ]);
+
+    $product->images()->create([
+        'image_url' => '/storage/productos/manual.jpg',
+        'source' => 'upload',
+        'is_primary' => true,
+        'sort_order' => 1,
+    ]);
+
+    $product->sourceMappings()->create([
+        'source' => 'free_ecommerce',
+        'external_id' => 'manual-1',
+        'checksum' => 'old',
+        'raw_payload' => ['id' => 'manual-1'],
+    ]);
+
+    $stats = app(ProductImportService::class)->import(fakeAdapter('free_ecommerce', [[
+        'id' => 'manual-1',
+        'name' => 'Managed Product',
+        'description' => 'Managed',
+        'category' => 'Accessories',
+        'priceCents' => 1000,
+        'image' => 'https://example.com/new.jpg',
+    ]], function (array $payload, string $source) {
+        return new NormalizedProductData(
+            source: $source,
+            externalId: (string) $payload['id'],
+            title: $payload['name'],
+            description: $payload['description'],
+            categoryName: $payload['category'],
+            priceAmount: $payload['priceCents'] / 100,
+            currency: 'USD',
+            vendor: null,
+            stock: 0,
+            imageUrls: [$payload['image']],
+            rawPayload: $payload,
+        );
+    }));
+
+    expect($stats['images_skipped'])->toBe(1);
+    Queue::assertNotPushed(SyncImportedProductImagesJob::class);
+});
+
+it('removes stale imported images that are no longer present in the source payload', function () {
+    Storage::fake('public');
+
+    $product = Product::create([
+        'name' => 'Image Cleanup',
+        'category_id' => importTestCategory('Accessories')->id,
+        'description' => 'Cleanup',
+        'price' => 10,
+        'stock' => 0,
+        'active' => true,
+        'primary_source' => 'escuelajs',
+    ]);
+
+    Storage::disk('public')->put('productos/importados/'.$product->id.'/old.jpg', 'old');
+
+    $oldImage = $product->images()->create([
+        'image_url' => '/storage/productos/importados/'.$product->id.'/old.jpg',
+        'external_url' => 'https://example.com/old.jpg',
         'source' => 'imported_local',
         'is_primary' => true,
         'sort_order' => 1,
     ]);
 
-    $job = new DownloadProductImageJob($image->id, 'https://i.imgur.com/R3iobJA.jpeg');
-    $job->handle();
-    $job->handle();
+    (new SyncImportedProductImagesJob($product->id, 'escuelajs', []))->handle();
 
-    $image->refresh();
-    $product->refresh();
-
-    expect($image->image_url)->toStartWith('/storage/productos/importados/'.$product->id.'/')
-        ->and($product->image_url)->toBe($image->image_url);
-
-    Http::assertSentCount(1);
-    Storage::disk('public')->assertExists(str_replace('/storage/', '', $image->image_url));
+    expect(ProductImage::count())->toBe(0)
+        ->and(ProductImage::query()->find($oldImage->id))->toBeNull();
+    Storage::disk('public')->assertMissing('productos/importados/'.$product->id.'/old.jpg');
 });
 
 it('seeds only the admin user and no demo products', function () {
@@ -512,12 +609,12 @@ it('queues the orchestrator command', function () {
     Bus::assertDispatched(ImportProductsFromApisJob::class);
 });
 
-it('dispatches all source jobs from the orchestrator', function () {
+it('dispatches one parametrized job per source from the orchestrator', function () {
     Bus::fake();
 
-    (new ImportProductsFromApisJob())->handle();
+    app(ImportProductsFromApisJob::class)->handle(app(\App\Services\ProductSourceRegistry::class));
 
-    Bus::assertDispatched(ImportFreeEcommerceProductsJob::class);
-    Bus::assertDispatched(ImportEscuelaJsProductsJob::class);
-    Bus::assertDispatched(ImportRouteMisrProductsJob::class);
+    Bus::assertDispatched(ImportProductSourceJob::class, fn ($job) => $job->source === 'free_ecommerce');
+    Bus::assertDispatched(ImportProductSourceJob::class, fn ($job) => $job->source === 'escuelajs');
+    Bus::assertDispatched(ImportProductSourceJob::class, fn ($job) => $job->source === 'route_misr');
 });
