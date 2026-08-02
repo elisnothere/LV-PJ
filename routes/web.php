@@ -40,6 +40,8 @@ Route::get('test', function () {
 });
 
 Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
+Route::get('/catalogo/{product}', [CatalogController::class, 'show'])->name('catalog.show');
+Route::post('/catalogo/{product}/stock-subscriptions', [CatalogController::class, 'subscribe'])->name('product-stock-subscriptions.store');
 
 Route::get('/carrito', [CartController::class, 'index'])->name('cart.index');
 Route::post('/carrito/{product}', [CartController::class, 'add'])->name('cart.add');

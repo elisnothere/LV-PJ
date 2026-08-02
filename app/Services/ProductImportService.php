@@ -16,8 +16,10 @@ use Throwable;
 
 class ProductImportService
 {
-    public function __construct(private CategoryService $categoryService)
-    {
+    public function __construct(
+        private CategoryService $categoryService,
+        private StockSubscriptionService $stockSubscriptionService,
+    ) {
     }
 
     public function import(ProductSourceAdapter $adapter): array
@@ -56,6 +58,12 @@ class ProductImportService
 
                 $result = DB::transaction(fn () => $this->upsertProduct($normalized));
 
+                $this->stockSubscriptionService->notifyIfBackInStock(
+                    $result['product'],
+                    $result['previous_stock'],
+                    $result['new_stock'],
+                );
+
                 $stats[$result['status']]++;
                 $stats['images_dispatched'] += $result['images_dispatched'];
                 $stats['images_failed'] += $result['images_failed'];
@@ -77,7 +85,7 @@ class ProductImportService
     }
 
     /**
-     * @return array{status: string, images_dispatched: int, images_failed: int}
+     * @return array{status: string, images_dispatched: int, images_failed: int, previous_stock: int, new_stock: int, product: Product}
      */
     private function upsertProduct(NormalizedProductData $normalized): array
     {
@@ -90,6 +98,7 @@ class ProductImportService
             ->first();
 
         $status = 'unchanged';
+        $previousStock = 0;
 
         if ($mapping) {
             $product = $mapping->product;
@@ -97,6 +106,8 @@ class ProductImportService
             if (! $product) {
                 throw new \RuntimeException('Source mapping exists without a linked product.');
             }
+
+            $previousStock = (int) $product->stock;
 
             if ($mapping->checksum !== $checksum || $this->productNeedsUpdate($product, $normalized, $category)) {
                 $this->fillProduct($product, $normalized, $category)->save();
@@ -124,11 +135,15 @@ class ProductImportService
         }
 
         $imageSync = $this->syncImages($product, $normalized);
+        $product = $product->fresh(['category', 'primaryImage', 'images']);
 
         return [
             'status' => $status,
             'images_dispatched' => $imageSync['images_dispatched'],
             'images_failed' => $imageSync['images_failed'],
+            'previous_stock' => $previousStock,
+            'new_stock' => (int) $product->stock,
+            'product' => $product,
         ];
     }
 

@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Categories\UpsertCategoryRequest;
+use App\Http\Requests\Products\StoreProductStockSubscriptionRequest;
 use App\Models\Category;
+use App\Models\Product;
 use App\Services\CatalogService;
 use App\Services\CategoryService;
+use App\Services\StockSubscriptionService;
 use Illuminate\Http\Request;
 
 class CatalogController extends Controller
@@ -13,6 +16,7 @@ class CatalogController extends Controller
     public function __construct(
         private CatalogService $catalogService,
         private CategoryService $categoryService,
+        private StockSubscriptionService $stockSubscriptionService,
     ) {
     }
 
@@ -25,6 +29,23 @@ class CatalogController extends Controller
             'categories' => $this->catalogService->categories(),
             'products' => $this->catalogService->paginatedProducts($search, $category),
         ]);
+    }
+
+    public function show(Product $product)
+    {
+        return view('catalog.show', [
+            'product' => $this->catalogService->publicProduct($product),
+        ]);
+    }
+
+    public function subscribe(StoreProductStockSubscriptionRequest $request, Product $product)
+    {
+        $product = $this->catalogService->publicProduct($product);
+        $result = $this->stockSubscriptionService->subscribe($product, $request->email());
+
+        return redirect()
+            ->route('catalog.show', $product)
+            ->with($result['created'] || $result['duplicate'] ? 'success' : 'error', $result['message']);
     }
 
     public function categories()

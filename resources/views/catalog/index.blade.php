@@ -103,30 +103,35 @@
         @forelse ($products as $product)
             <div class="col-12 col-md-6 col-xl-4 mb-3">
                 <div class="card h-100">
-                    @if ($product->primary_image_url)
-                        <img src="{{ $product->primary_image_url }}" class="card-img-top" alt="{{ $product->name }}" style="height: 180px; object-fit: cover;">
-                    @else
-                        <div class="bg-body-secondary d-flex align-items-center justify-content-center" style="height: 180px;">
-                            <i class="bi bi-box-seam display-3 text-secondary"></i>
-                        </div>
-                    @endif
+                    <a href="{{ route('catalog.show', $product) }}" class="text-decoration-none text-reset">
+                        @if ($product->primary_image_url)
+                            <img src="{{ $product->primary_image_url }}" class="card-img-top" alt="{{ $product->name }}" style="height: 180px; object-fit: cover;">
+                        @else
+                            <div class="bg-body-secondary d-flex align-items-center justify-content-center" style="height: 180px;">
+                                <i class="bi bi-box-seam display-3 text-secondary"></i>
+                            </div>
+                        @endif
+                    </a>
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between gap-2">
-                            <h5 class="card-title">{{ $product->name }}</h5>
+                            <h5 class="card-title mb-0"><a href="{{ route('catalog.show', $product) }}" class="text-decoration-none text-reset">{{ $product->name }}</a></h5>
                             <span class="badge text-bg-info align-self-start">{{ $product->category?->name ?? 'Sin categoria' }}</span>
                         </div>
-                        <p class="card-text text-secondary">{{ $product->description ?: 'Sin descripcion.' }}</p>
+                        <p class="card-text text-secondary mt-2">{{ $product->description ?: 'Sin descripcion.' }}</p>
                         <div class="mt-auto">
                             <p class="fs-5 fw-semibold mb-1">${{ number_format($product->price, 2) }}</p>
                             <p class="text-secondary mb-3">Stock: {{ $product->stock }}</p>
-                            <form action="{{ route('cart.add', $product) }}" method="post" class="d-flex gap-2">
-                                @csrf
-                                <input type="number" name="quantity" class="form-control" value="1" min="1" max="{{ max($product->stock, 1) }}" style="max-width: 90px;">
-                                <button type="submit" class="btn btn-primary flex-grow-1" @disabled($product->stock < 1)>
-                                    <i class="bi bi-cart-plus me-1"></i>
-                                    Agregar
-                                </button>
-                            </form>
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('catalog.show', $product) }}" class="btn btn-outline-secondary">Ver detalle</a>
+                                <form action="{{ route('cart.add', $product) }}" method="post" class="d-flex gap-2 flex-grow-1">
+                                    @csrf
+                                    <input type="number" name="quantity" class="form-control" value="1" min="1" max="{{ max($product->stock, 1) }}" style="max-width: 90px;">
+                                    <button type="submit" class="btn btn-primary flex-grow-1" @disabled($product->stock < 1)>
+                                        <i class="bi bi-cart-plus me-1"></i>
+                                        Agregar
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>

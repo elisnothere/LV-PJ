@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 
 class CatalogService
@@ -56,5 +57,16 @@ class CatalogService
             ->orderBy('name')
             ->paginate(9)
             ->withQueryString();
+    }
+
+    public function publicProduct(Product $product): Product
+    {
+        $product->loadMissing(['category', 'primaryImage', 'images']);
+
+        if (! $product->active) {
+            throw (new ModelNotFoundException())->setModel(Product::class, [$product->getKey()]);
+        }
+
+        return $product;
     }
 }

@@ -50,6 +50,13 @@ class Product extends Model
             ->orderBy('external_id');
     }
 
+    public function stockSubscriptions(): HasMany
+    {
+        return $this->hasMany(ProductStockSubscription::class)
+            ->orderBy('status')
+            ->orderBy('id');
+    }
+
     public function primaryImage(): HasOne
     {
         return $this->hasOne(ProductImage::class)

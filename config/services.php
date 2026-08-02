@@ -28,6 +28,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'mailtrap' => [
+        'api_token' => env('MAILTRAP_API_TOKEN'),
+        'from_address' => env('MAILTRAP_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+        'from_name' => env('MAILTRAP_FROM_NAME', env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel'))),
+        'category' => env('MAILTRAP_CATEGORY', 'Back in Stock'),
+        'bulk' => (bool) env('MAILTRAP_BULK', true),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

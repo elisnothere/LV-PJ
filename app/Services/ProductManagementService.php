@@ -10,6 +10,7 @@ class ProductManagementService
     public function __construct(
         private ProductImageService $productImageService,
         private CategoryService $categoryService,
+        private StockSubscriptionService $stockSubscriptionService,
     ) {
     }
 
@@ -31,7 +32,9 @@ class ProductManagementService
 
     public function update(Product $product, array $productData, ?int $categoryId, ?string $newCategoryName, array $imageFiles, string $imageUrlsInput, array $deleteImageIds, ?int $primaryImageId): Product
     {
-        return DB::transaction(function () use ($product, $productData, $categoryId, $newCategoryName, $imageFiles, $imageUrlsInput, $deleteImageIds, $primaryImageId) {
+        $previousStock = (int) $product->stock;
+
+        $updatedProduct = DB::transaction(function () use ($product, $productData, $categoryId, $newCategoryName, $imageFiles, $imageUrlsInput, $deleteImageIds, $primaryImageId) {
             $category = $this->categoryService->resolveFromSelection($categoryId, $newCategoryName);
 
             $product->update([
@@ -44,8 +47,16 @@ class ProductManagementService
             $this->productImageService->applyRequestedPrimaryImage($product, $primaryImageId);
             $this->productImageService->ensurePrimaryImage($product);
 
-            return $product;
+            return $product->fresh(['category', 'primaryImage', 'images']);
         });
+
+        $this->stockSubscriptionService->notifyIfBackInStock(
+            $updatedProduct,
+            $previousStock,
+            (int) $updatedProduct->stock,
+        );
+
+        return $updatedProduct;
     }
 
     public function delete(Product $product): void
