@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Observers\OrderObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,6 +35,11 @@ class Order extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::observe(OrderObserver::class);
+    }
+
     public function shippingCity(): BelongsTo
     {
         return $this->belongsTo(ShippingCity::class);
@@ -42,5 +48,12 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function statusHistory(): HasMany
+    {
+        return $this->hasMany(OrderStatusHistory::class)
+            ->orderByDesc('assigned_at')
+            ->orderByDesc('id');
     }
 }

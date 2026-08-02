@@ -32,7 +32,7 @@ class OrderQueryService
 
     public function loadForDisplay(Order $order): Order
     {
-        $order->load(['items.product.primaryImage']);
+        $order->load(['items.product.primaryImage', 'statusHistory']);
 
         return $order;
     }
@@ -43,7 +43,7 @@ class OrderQueryService
             throw new AuthorizationException();
         }
 
-        $order->load(['items.product.primaryImage']);
+        $order->load(['items.product.primaryImage', 'statusHistory']);
 
         return $order;
     }

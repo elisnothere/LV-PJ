@@ -9,7 +9,7 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="row">
+    <div class="row g-4">
         <div class="col-12 col-lg-8">
             <div class="card">
                 <div class="card-header">
@@ -81,7 +81,12 @@
                         @csrf
                         @method('PATCH')
                         <div class="card-body">
-                            <select name="status" class="form-select">
+                            <div class="mb-3">
+                                <div class="text-secondary small text-uppercase">Estado actual</div>
+                                <span class="badge text-bg-primary fs-6">{{ ucfirst($order->status) }}</span>
+                            </div>
+                            <label for="status" class="form-label">Actualizar estado</label>
+                            <select id="status" name="status" class="form-select">
                                 @foreach (\App\Models\Order::STATUSES as $status)
                                     <option value="{{ $status }}" @selected($order->status === $status)>{{ ucfirst($status) }}</option>
                                 @endforeach
@@ -96,9 +101,29 @@
                     </form>
                 @else
                     <div class="card-body">
+                        <div class="text-secondary small text-uppercase mb-2">Estado actual</div>
                         <span class="badge text-bg-primary fs-6">{{ ucfirst($order->status) }}</span>
                     </div>
                 @endif
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Historial de estados</h3>
+                </div>
+                <div class="card-body">
+                    @forelse ($order->statusHistory as $history)
+                        <div class="d-flex gap-3 {{ $loop->last ? '' : 'border-bottom pb-3 mb-3' }}">
+                            <span class="badge text-bg-light border align-self-start">{{ $loop->iteration }}</span>
+                            <div>
+                                <div class="fw-semibold">{{ ucfirst($history->status) }}</div>
+                                <div class="text-secondary small">{{ $history->assigned_at->format('d/m/Y H:i') }}</div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-secondary mb-0">Todavia no hay cambios registrados para este pedido.</p>
+                    @endforelse
+                </div>
             </div>
         </div>
     </div>

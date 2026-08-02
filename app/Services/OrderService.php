@@ -30,6 +30,7 @@ class OrderService
                 'shipping_city_id' => $shippingCity->id,
                 'shipping_city_name' => $shippingCity->name,
                 'code' => 'PED-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6)),
+                'status' => Order::STATUSES[0],
                 'subtotal' => 0,
                 'shipping_cost' => (float) $shippingCity->shipping_cost,
                 'total' => (float) $shippingCity->shipping_cost,
