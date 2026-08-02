@@ -6,20 +6,12 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
-use App\Models\Product;
 
-Route::get('/', function () {
-    if (! auth()->check()) {
-        return view('home');
-    }
-
-    return auth()->user()->role === 'admin'
-        ? redirect()->route('dashboard')
-        : redirect()->route('catalog.index');
-})->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'login'])->name('login');
@@ -30,30 +22,22 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-Route::get('/hola', function(){ 
-    return "Hola mundo";
+Route::get('/hola', function () {
+    return 'Hola mundo';
 });
 
-Route::get('/categoria', function () {
-    $categories = Product::query()
-        ->where('active', true)
-        ->selectRaw('category, count(*) as products_count')
-        ->groupBy('category')
-        ->orderBy('category')
-        ->get();
+Route::get('/categoria', [CatalogController::class, 'categories']);
+Route::view('/contacto', 'contacto');
 
-    return view('partials.categoria', compact('categories'));
-});
-Route::view("/contacto","contacto");
-
-Route::get("test", function(){
+Route::get('test', function () {
     try {
         DB::connection()->getPdo();
-        return "Conexión exitosa a la base de datos: " . DB::connection()->getDatabaseName();
+
+        return 'Conexión exitosa a la base de datos: ' . DB::connection()->getDatabaseName();
     } catch (\Exception $e) {
-        return "Error al conectar a la base de datos: " . $e->getMessage();
+        return 'Error al conectar a la base de datos: ' . $e->getMessage();
     }
-});  
+});
 
 Route::get('/catalogo', [CatalogController::class, 'index'])->name('catalog.index');
 

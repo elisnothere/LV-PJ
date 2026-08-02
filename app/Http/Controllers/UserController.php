@@ -2,28 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Users\StoreUserRequest;
+use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
+use App\Services\UserManagementService;
+use App\Services\UserQueryService;
+use DomainException;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private UserManagementService $userManagementService,
+        private UserQueryService $userQueryService,
+    ) {
+    }
+
     public function index(Request $request)
     {
-        $users = User::query()
-            ->when($request->filled('buscar'), function ($query) use ($request) {
-                $search = (string) $request->string('buscar');
+        $search = $request->filled('buscar') ? (string) $request->string('buscar') : null;
 
-                $query->where(function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            })
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('users.index', compact('users'));
+        return view('users.index', [
+            'users' => $this->userQueryService->paginated($search),
+        ]);
     }
 
     public function create()
@@ -31,19 +32,9 @@ class UserController extends Controller
         return view('users.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => ['required', Rule::in(User::ROLES)],
-        ]);
-
-        User::create([
-            ...$validated,
-            'active' => $request->boolean('active'),
-        ]);
+        $this->userManagementService->create($request->userData());
 
         return redirect()
             ->route('usuarios.index')
@@ -55,23 +46,9 @@ class UserController extends Controller
         return view('users.edit', ['user' => $usuario]);
     }
 
-    public function update(Request $request, User $usuario)
+    public function update(UpdateUserRequest $request, User $usuario)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-            'role' => ['required', Rule::in(User::ROLES)],
-        ]);
-
-        if (empty($validated['password'])) {
-            unset($validated['password']);
-        }
-
-        $usuario->update([
-            ...$validated,
-            'active' => $request->boolean('active'),
-        ]);
+        $this->userManagementService->update($usuario, $request->userData());
 
         return redirect()
             ->route('usuarios.index')
@@ -80,11 +57,11 @@ class UserController extends Controller
 
     public function destroy(User $usuario)
     {
-        if (auth()->id() === $usuario->id) {
-            return back()->with('error', 'No puede eliminar su propio usuario.');
+        try {
+            $this->userManagementService->delete($usuario, auth()->id());
+        } catch (DomainException $exception) {
+            return back()->with('error', $exception->getMessage());
         }
-
-        $usuario->delete();
 
         return redirect()
             ->route('usuarios.index')
@@ -93,11 +70,11 @@ class UserController extends Controller
 
     public function toggleActive(User $usuario)
     {
-        if (auth()->id() === $usuario->id) {
-            return back()->with('error', 'No puede desactivar su propio usuario.');
+        try {
+            $this->userManagementService->toggleActive($usuario, auth()->id());
+        } catch (DomainException $exception) {
+            return back()->with('error', $exception->getMessage());
         }
-
-        $usuario->update(['active' => ! $usuario->active]);
 
         return back()->with('success', 'Estado del usuario actualizado.');
     }

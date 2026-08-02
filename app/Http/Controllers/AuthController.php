@@ -2,42 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Services\AuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(private AuthService $authService)
+    {
+    }
+
     public function login()
     {
         return view('auth.login');
     }
 
-    public function authenticate(Request $request)
+    public function authenticate(LoginRequest $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            throw ValidationException::withMessages([
-                'email' => 'Las credenciales ingresadas no son correctas.',
-            ]);
-        }
-
-        if (! Auth::user()->active) {
-            Auth::logout();
-
-            throw ValidationException::withMessages([
-                'email' => 'El usuario esta inactivo.',
-            ]);
-        }
+        $user = $this->authService->authenticate($request->credentials(), $request->boolean('remember'));
 
         $request->session()->regenerate();
 
-        $redirect = Auth::user()->role === 'admin' ? route('dashboard') : route('catalog.index');
+        $redirect = $user->role === 'admin' ? route('dashboard') : route('catalog.index');
 
         return redirect()->intended($redirect);
     }
@@ -47,21 +34,11 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    public function storeRegister(Request $request)
+    public function storeRegister(RegisterRequest $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
+        $user = $this->authService->registerCustomer($request->registrationData());
 
-        $user = User::create([
-            ...$validated,
-            'role' => 'cliente',
-            'active' => true,
-        ]);
-
-        Auth::login($user);
+        $this->authService->login($user);
         $request->session()->regenerate();
 
         return redirect()->route('catalog.index');
@@ -69,7 +46,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::logout();
+        $this->authService->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

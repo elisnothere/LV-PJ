@@ -2,131 +2,88 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Orders\StoreOrderRequest;
+use App\Http\Requests\Orders\UpdateOrderStatusRequest;
 use App\Models\Order;
-use App\Models\Product;
+use App\Services\CartService;
+use App\Services\OrderQueryService;
+use App\Services\OrderService;
+use DomainException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
+    public function __construct(
+        private CartService $cartService,
+        private OrderService $orderService,
+        private OrderQueryService $orderQueryService,
+    ) {
+    }
+
     public function checkout()
     {
         return view('orders.checkout', [
-            'cart' => session('cart', []),
-            'total' => $this->cartTotal(),
+            'cart' => $this->cartService->contents(),
+            'total' => $this->cartService->total(),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreOrderRequest $request)
     {
-        $cart = session('cart', []);
-
-        if (empty($cart)) {
-            return redirect()->route('catalog.index')->with('error', 'El carrito esta vacio.');
+        try {
+            $order = $this->orderService->createFromCart(
+                $this->cartService->contents(),
+                $request->orderData(),
+                auth()->id(),
+            );
+        } catch (DomainException $exception) {
+            return redirect()->route('catalog.index')->with('error', $exception->getMessage());
         }
 
-        $validated = $request->validate([
-            'customer_name' => ['required', 'string', 'max:255'],
-            'customer_email' => ['required', 'email', 'max:255'],
-            'customer_phone' => ['nullable', 'string', 'max:50'],
-            'delivery_address' => ['required', 'string', 'max:500'],
-        ]);
-
-        $order = DB::transaction(function () use ($cart, $validated) {
-            $order = Order::create([
-                ...$validated,
-                'user_id' => auth()->id(),
-                'code' => 'PED-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6)),
-                'total' => $this->cartTotal(),
-            ]);
-
-            foreach ($cart as $item) {
-                $product = Product::lockForUpdate()->find($item['id']);
-
-                if (! $product || ! $product->active || $product->stock < $item['quantity']) {
-                    throw ValidationException::withMessages([
-                        'cart' => 'El producto "' . $item['name'] . '" ya no tiene stock suficiente.',
-                    ]);
-                }
-
-                $product->decrement('stock', $item['quantity']);
-
-                $order->items()->create([
-                    'product_id' => $product?->id,
-                    'product_name' => $item['name'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['price'],
-                    'subtotal' => $item['price'] * $item['quantity'],
-                ]);
-            }
-
-            return $order;
-        });
-
-        session()->forget('cart');
+        $this->cartService->clear();
 
         return redirect()->route('orders.show', $order)->with('success', 'Pedido realizado correctamente.');
     }
 
     public function index(Request $request)
     {
-        $orders = Order::query()
-            ->when($request->filled('buscar'), function ($query) use ($request) {
-                $search = (string) $request->string('buscar');
+        $search = $request->filled('buscar') ? (string) $request->string('buscar') : null;
 
-                $query->where(function ($query) use ($search) {
-                    $query->where('code', 'like', "%{$search}%")
-                        ->orWhere('customer_name', 'like', "%{$search}%")
-                        ->orWhere('customer_email', 'like', "%{$search}%");
-                });
-            })
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('orders.index', compact('orders'));
+        return view('orders.index', [
+            'orders' => $this->orderQueryService->paginatedForAdmin($search),
+        ]);
     }
 
     public function show(Order $order)
     {
-        $order->load('items');
-
-        return view('orders.show', compact('order'));
+        return view('orders.show', [
+            'order' => $this->orderQueryService->loadForDisplay($order),
+        ]);
     }
 
     public function mine()
     {
-        $orders = Order::where('user_id', auth()->id())
-            ->latest()
-            ->paginate(10);
-
-        return view('orders.mine', compact('orders'));
+        return view('orders.mine', [
+            'orders' => $this->orderQueryService->paginatedForUser((int) auth()->id()),
+        ]);
     }
 
     public function myOrder(Order $order)
     {
-        abort_unless($order->user_id === auth()->id(), 403);
-
-        $order->load('items');
+        try {
+            $order = $this->orderQueryService->loadOwnedOrder($order, (int) auth()->id());
+        } catch (AuthorizationException) {
+            abort(403);
+        }
 
         return view('orders.show', compact('order'));
     }
 
-    public function updateStatus(Request $request, Order $order)
+    public function updateStatus(UpdateOrderStatusRequest $request, Order $order)
     {
-        $validated = $request->validate([
-            'status' => ['required', 'in:' . implode(',', Order::STATUSES)],
-        ]);
-
-        $order->update($validated);
+        $this->orderService->updateStatus($order, $request->status());
 
         return back()->with('success', 'Estado del pedido actualizado.');
-    }
-
-    private function cartTotal(): float
-    {
-        return collect(session('cart', []))->sum(fn ($item) => $item['price'] * $item['quantity']);
     }
 }

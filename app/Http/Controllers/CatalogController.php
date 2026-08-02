@@ -2,35 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Services\CatalogService;
 use Illuminate\Http\Request;
 
 class CatalogController extends Controller
 {
+    public function __construct(private CatalogService $catalogService)
+    {
+    }
+
     public function index(Request $request)
     {
-        $categories = Product::query()
-            ->where('active', true)
-            ->select('category')
-            ->distinct()
-            ->orderBy('category')
-            ->pluck('category');
+        $search = $request->filled('buscar') ? (string) $request->string('buscar') : null;
+        $category = $request->filled('categoria') ? (string) $request->string('categoria') : null;
 
-        $products = Product::with('primaryImage')
-            ->where('active', true)
-            ->when($request->filled('buscar'), function ($query) use ($request) {
-                $search = (string) $request->string('buscar');
+        return view('catalog.index', [
+            'categories' => $this->catalogService->categories(),
+            'products' => $this->catalogService->paginatedProducts($search, $category),
+        ]);
+    }
 
-                $query->where(function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
-                });
-            })
-            ->when($request->filled('categoria'), fn ($query) => $query->where('category', $request->categoria))
-            ->orderBy('name')
-            ->paginate(9)
-            ->withQueryString();
-
-        return view('catalog.index', compact('categories', 'products'));
+    public function categories()
+    {
+        return view('partials.categoria', [
+            'categories' => $this->catalogService->categorySummary(),
+        ]);
     }
 }
