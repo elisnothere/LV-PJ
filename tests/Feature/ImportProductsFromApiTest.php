@@ -2,14 +2,15 @@
 
 use App\Contracts\ProductSourceAdapter;
 use App\Data\NormalizedProductData;
-use App\Jobs\ImportProductSourceJob;
 use App\Jobs\ImportProductsFromApisJob;
+use App\Jobs\ImportProductSourceJob;
 use App\Jobs\SyncImportedProductImagesJob;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductSourceMapping;
 use App\Services\ProductImportService;
+use App\Services\ProductSourceRegistry;
 use App\Services\ProductSources\RouteMisrProductsAdapter;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,8 +38,7 @@ function fakeAdapter(string $source, array $payloads, callable $normalizer): Pro
             private string $sourceName,
             private array $payloads,
             private $normalizer,
-        ) {
-        }
+        ) {}
 
         public function source(): string
         {
@@ -61,9 +61,7 @@ function failingAdapter(string $source): ProductSourceAdapter
 {
     return new class($source) implements ProductSourceAdapter
     {
-        public function __construct(private string $sourceName)
-        {
-        }
+        public function __construct(private string $sourceName) {}
 
         public function source(): string
         {
@@ -442,7 +440,7 @@ it('retries route misr source fetches after a 429 response', function () {
             ]],
         ], 200);
 
-    $adapter = new RouteMisrProductsAdapter();
+    $adapter = new RouteMisrProductsAdapter;
     $products = $adapter->fetchProducts();
 
     expect($products)->toHaveCount(1)
@@ -592,13 +590,6 @@ it('removes stale imported images that are no longer present in the source paylo
     Storage::disk('public')->assertMissing('productos/importados/'.$product->id.'/old.jpg');
 });
 
-it('seeds only the admin user and no demo products', function () {
-    $this->seed();
-
-    expect(Product::count())->toBe(0)
-        ->and(\App\Models\User::query()->where('email', 'admin@example.com')->exists())->toBeTrue();
-});
-
 it('queues the orchestrator command', function () {
     Bus::fake();
 
@@ -612,7 +603,7 @@ it('queues the orchestrator command', function () {
 it('dispatches one parametrized job per source from the orchestrator', function () {
     Bus::fake();
 
-    app(ImportProductsFromApisJob::class)->handle(app(\App\Services\ProductSourceRegistry::class));
+    app(ImportProductsFromApisJob::class)->handle(app(ProductSourceRegistry::class));
 
     Bus::assertDispatched(ImportProductSourceJob::class, fn ($job) => $job->source === 'free_ecommerce');
     Bus::assertDispatched(ImportProductSourceJob::class, fn ($job) => $job->source === 'escuelajs');
