@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use Illuminate\Http\Request;
 use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\MessageBag;
 
 class ProductController extends Controller
 {
@@ -24,6 +27,10 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        if ($uploadErrors = $this->validateImageUploads($request)) {
+            return back()->withErrors($uploadErrors)->withInput();
+        }
+
         DB::transaction(function () use ($request) {
             $product = Product::create($this->productData($request));
 
@@ -45,6 +52,10 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
+        if ($uploadErrors = $this->validateImageUploads($request)) {
+            return back()->withErrors($uploadErrors)->withInput();
+        }
+
         DB::transaction(function () use ($request, $product) {
             $product->update($this->productData($request));
 
@@ -87,7 +98,7 @@ class ProductController extends Controller
             'price' => ['required', 'numeric', 'min:0'],
             'stock' => ['required', 'integer', 'min:0'],
             'image_files' => ['nullable', 'array'],
-            'image_files.*' => ['uploaded', 'image', 'max:10240'],
+            'image_files.*' => ['image', 'max:10240'],
             'image_urls' => [
                 'nullable',
                 'string',
@@ -104,7 +115,6 @@ class ProductController extends Controller
             'delete_image_ids' => ['nullable', 'array'],
             'delete_image_ids.*' => ['integer'],
         ], [
-            'image_files.*.uploaded' => 'No se pudo subir una imagen. Verifique que el archivo pese menos de 10 MB y vuelva a intentar.',
             'image_files.*.image' => 'Cada archivo subido debe ser una imagen valida.',
             'image_files.*.max' => 'Cada imagen debe pesar como maximo 10 MB.',
         ]);
@@ -119,11 +129,79 @@ class ProductController extends Controller
         ];
     }
 
+    private function validateImageUploads(Request $request): ?MessageBag
+    {
+        $errors = new MessageBag();
+
+        foreach ($this->normalizedImageFiles($request) as $index => $file) {
+            if (! $file instanceof UploadedFile) {
+                continue;
+            }
+
+            if ($file->isValid()) {
+                continue;
+            }
+
+            $errors->add("image_files.$index", $this->uploadErrorMessage($file->getError()));
+            $this->logUploadFailure($file, $index);
+        }
+
+        return $errors->isEmpty() ? null : $errors;
+    }
+
+    /**
+     * @return array<int, UploadedFile>
+     */
+    private function normalizedImageFiles(Request $request): array
+    {
+        $files = $request->allFiles()['image_files'] ?? [];
+
+        if ($files instanceof UploadedFile) {
+            return [$files];
+        }
+
+        if (! is_array($files)) {
+            return [];
+        }
+
+        return collect($files)
+            ->flatten(1)
+            ->filter(fn ($file) => $file instanceof UploadedFile)
+            ->values()
+            ->all();
+    }
+
+    private function uploadErrorMessage(int $errorCode): string
+    {
+        return match ($errorCode) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'La imagen excede el limite permitido por el servidor o el formulario.',
+            UPLOAD_ERR_PARTIAL => 'La imagen se subio de forma incompleta. Vuelva a intentarlo.',
+            UPLOAD_ERR_NO_TMP_DIR => 'El servidor no encontro la carpeta temporal de subida.',
+            UPLOAD_ERR_CANT_WRITE => 'El servidor no pudo escribir la imagen en disco.',
+            UPLOAD_ERR_EXTENSION => 'Una extension del servidor interrumpio la subida de la imagen.',
+            default => 'No se pudo subir una imagen. Vuelva a intentarlo.',
+        };
+    }
+
+    private function logUploadFailure(UploadedFile $file, int $index): void
+    {
+        Log::warning('Product image upload failed', [
+            'field' => "image_files.$index",
+            'client_name' => $file->getClientOriginalName(),
+            'client_size' => $file->getSize(),
+            'mime_type' => $file->getClientMimeType(),
+            'php_upload_error' => $file->getError(),
+            'upload_max_filesize' => ini_get('upload_max_filesize'),
+            'post_max_size' => ini_get('post_max_size'),
+            'upload_tmp_dir' => ini_get('upload_tmp_dir'),
+        ]);
+    }
+
     private function storeNewImages(Product $product, Request $request): void
     {
         $sortOrder = ((int) $product->images()->max('sort_order')) + 1;
 
-        foreach ($request->file('image_files', []) as $file) {
+        foreach ($this->normalizedImageFiles($request) as $file) {
             $product->images()->create([
                 'image_url' => Storage::url($file->store('productos', 'public')),
                 'source' => 'upload',
@@ -156,6 +234,7 @@ class ProductController extends Controller
             ->values()
             ->all();
     }
+
     private function deleteSelectedImages(Product $product, Request $request): void
     {
         $imageIds = $request->input('delete_image_ids', []);

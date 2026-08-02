@@ -41,7 +41,7 @@
                     <div class="text-danger small mt-1">{{ $message }}</div>
                 @endforeach
             @endforeach
-            <small class="text-secondary">Puede seleccionar varias imagenes. Maximo 10 MB por archivo.</small>
+            <small class="text-secondary">Puede seleccionar varias imagenes JPG, JPEG o PNG. Maximo 10 MB por archivo.</small>
         </div>
 
         <div class="form-group col-12 mb-3">
