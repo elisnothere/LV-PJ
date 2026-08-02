@@ -17,7 +17,10 @@ class CartController extends Controller
     {
         return view('cart.index', [
             'cart' => $this->cartService->contents(),
-            'total' => $this->cartService->total(),
+            'selectedShippingCity' => $this->cartService->selectedShippingCity(),
+            'subtotal' => $this->cartService->subtotal(),
+            'shippingCost' => $this->cartService->shippingCost(),
+            'total' => $this->cartService->totalWithShipping(),
         ]);
     }
 

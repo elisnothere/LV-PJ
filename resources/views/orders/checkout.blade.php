@@ -4,14 +4,43 @@
 @section('page-title', 'Realizar pedido')
 
 @section('contenido')
-    <div class="row">
+    <div class="row g-4">
         <div class="col-12 col-lg-7">
+            <div class="card card-primary card-outline mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">Envio</h3>
+                </div>
+                <div class="card-body">
+                    <form action="{{ route('orders.checkout') }}" method="get" class="row g-3 align-items-end">
+                        <div class="col-12 col-md-8">
+                            <label for="shipping_city_id" class="form-label">Ciudad de envio</label>
+                            <select id="shipping_city_id" name="shipping_city_id" class="form-select">
+                                <option value="">Seleccione una ciudad</option>
+                                @foreach ($shippingCities as $shippingCity)
+                                    <option value="{{ $shippingCity->id }}" @selected(old('shipping_city_id', $selectedShippingCity?->id) == $shippingCity->id)>
+                                        {{ $shippingCity->name }} - ${{ number_format($shippingCity->shipping_cost, 2) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('shipping_city_id') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-arrow-repeat me-1"></i>
+                                Actualizar envio
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card card-primary card-outline">
                 <div class="card-header">
                     <h3 class="card-title">Datos de entrega</h3>
                 </div>
                 <form action="{{ route('orders.store') }}" method="post">
                     @csrf
+                    <input type="hidden" name="shipping_city_id" value="{{ old('shipping_city_id', $selectedShippingCity?->id) }}">
                     <div class="card-body">
                         @if ($errors->any())
                             <div class="alert alert-danger">
@@ -69,7 +98,21 @@
                     @endforelse
                 </div>
                 <div class="card-footer">
-                    <strong>Total: ${{ number_format($total, 2) }}</strong>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal</span>
+                        <strong>${{ number_format($subtotal, 2) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Envio</span>
+                        <strong>${{ number_format($shippingCost, 2) }}</strong>
+                    </div>
+                    @if ($selectedShippingCity)
+                        <div class="small text-muted mb-2">Ciudad seleccionada: {{ $selectedShippingCity->name }}</div>
+                    @endif
+                    <div class="d-flex justify-content-between">
+                        <span>Total</span>
+                        <strong>${{ number_format($total, 2) }}</strong>
+                    </div>
                 </div>
             </div>
         </div>

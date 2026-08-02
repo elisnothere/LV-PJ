@@ -3,13 +3,18 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\ShippingCity;
 use DomainException;
 use Illuminate\Session\Store;
 
 class CartService
 {
-    public function __construct(private Store $session)
-    {
+    private const SHIPPING_CITY_SESSION_KEY = 'checkout.shipping_city_id';
+
+    public function __construct(
+        private Store $session,
+        private ShippingCityService $shippingCityService,
+    ) {
     }
 
     public function contents(): array
@@ -17,9 +22,49 @@ class CartService
         return $this->session->get('cart', []);
     }
 
-    public function total(): float
+    public function subtotal(): float
     {
         return (float) collect($this->contents())->sum(fn ($item) => $item['price'] * $item['quantity']);
+    }
+
+    public function total(): float
+    {
+        return $this->subtotal();
+    }
+
+    public function selectedShippingCityId(): ?int
+    {
+        $value = $this->session->get(self::SHIPPING_CITY_SESSION_KEY);
+
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    public function setShippingCityId(?int $shippingCityId): void
+    {
+        if ($shippingCityId) {
+            $this->session->put(self::SHIPPING_CITY_SESSION_KEY, $shippingCityId);
+
+            return;
+        }
+
+        $this->session->forget(self::SHIPPING_CITY_SESSION_KEY);
+    }
+
+    public function selectedShippingCity(?int $shippingCityId = null): ?ShippingCity
+    {
+        $shippingCityId ??= $this->selectedShippingCityId();
+
+        return $this->shippingCityService->findActiveOrNull($shippingCityId);
+    }
+
+    public function shippingCost(?int $shippingCityId = null): float
+    {
+        return (float) ($this->selectedShippingCity($shippingCityId)?->shipping_cost ?? 0);
+    }
+
+    public function totalWithShipping(?int $shippingCityId = null): float
+    {
+        return $this->subtotal() + $this->shippingCost($shippingCityId);
     }
 
     public function add(Product $product, int $quantity): void
@@ -67,5 +112,6 @@ class CartService
     public function clear(): void
     {
         $this->session->forget('cart');
+        $this->session->forget(self::SHIPPING_CITY_SESSION_KEY);
     }
 }

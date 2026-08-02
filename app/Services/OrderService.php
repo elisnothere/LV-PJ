@@ -11,18 +11,30 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
-    public function createFromCart(array $cart, array $orderData, ?int $userId): Order
+    public function __construct(private ShippingCityService $shippingCityService)
+    {
+    }
+
+    public function createFromCart(array $cart, array $orderData, ?int $userId, int $shippingCityId): Order
     {
         if (empty($cart)) {
             throw new DomainException('El carrito esta vacio.');
         }
 
-        return DB::transaction(function () use ($cart, $orderData, $userId) {
+        return DB::transaction(function () use ($cart, $orderData, $userId, $shippingCityId) {
+            $shippingCity = $this->shippingCityService->resolveActiveOrFail($shippingCityId);
+            $subtotal = (float) collect($cart)->sum(fn ($item) => $item['price'] * $item['quantity']);
+            $shippingCost = (float) $shippingCity->shipping_cost;
+
             $order = Order::create([
                 ...$orderData,
                 'user_id' => $userId,
+                'shipping_city_id' => $shippingCity->id,
+                'shipping_city_name' => $shippingCity->name,
                 'code' => 'PED-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6)),
-                'total' => collect($cart)->sum(fn ($item) => $item['price'] * $item['quantity']),
+                'subtotal' => $subtotal,
+                'shipping_cost' => $shippingCost,
+                'total' => $subtotal + $shippingCost,
             ]);
 
             foreach ($cart as $item) {

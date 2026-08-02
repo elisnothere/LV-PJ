@@ -82,9 +82,21 @@
                 </tbody>
             </table>
         </div>
-        <div class="card-footer d-flex align-items-center">
-            <strong>Total: ${{ number_format($total, 2) }}</strong>
-            <div class="ms-auto">
+        <div class="card-footer d-flex flex-column flex-lg-row gap-3 align-items-lg-center">
+            <div>
+                <div><strong>Subtotal:</strong> ${{ number_format($subtotal, 2) }}</div>
+                <div>
+                    <strong>Envio:</strong>
+                    @if ($selectedShippingCity)
+                        ${{ number_format($shippingCost, 2) }}
+                        <span class="text-muted">({{ $selectedShippingCity->name }})</span>
+                    @else
+                        <span class="text-muted">Se calcula en checkout</span>
+                    @endif
+                </div>
+                <div><strong>Total:</strong> ${{ number_format($total, 2) }}</div>
+            </div>
+            <div class="ms-lg-auto">
                 <a href="{{ route('catalog.index') }}" class="btn btn-outline-secondary">Seguir comprando</a>
                 <a href="{{ route('orders.checkout') }}" class="btn btn-primary {{ empty($cart) ? 'disabled' : '' }}">
                     <i class="bi bi-bag-check me-1"></i>

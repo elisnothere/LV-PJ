@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Services\CartService;
 use App\Services\OrderQueryService;
 use App\Services\OrderService;
+use App\Services\ShippingCityService;
 use DomainException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
@@ -18,14 +19,33 @@ class OrderController extends Controller
         private CartService $cartService,
         private OrderService $orderService,
         private OrderQueryService $orderQueryService,
+        private ShippingCityService $shippingCityService,
     ) {
     }
 
-    public function checkout()
+    public function checkout(Request $request)
     {
+        if ($request->exists('shipping_city_id')) {
+            $selectedId = $request->filled('shipping_city_id')
+                ? (int) $request->integer('shipping_city_id')
+                : null;
+
+            $this->cartService->setShippingCityId($selectedId);
+        }
+
+        $selectedShippingCity = $this->cartService->selectedShippingCity();
+
+        if ($this->cartService->selectedShippingCityId() && ! $selectedShippingCity) {
+            $this->cartService->setShippingCityId(null);
+        }
+
         return view('orders.checkout', [
             'cart' => $this->cartService->contents(),
-            'total' => $this->cartService->total(),
+            'shippingCities' => $this->shippingCityService->active(),
+            'selectedShippingCity' => $selectedShippingCity,
+            'subtotal' => $this->cartService->subtotal(),
+            'shippingCost' => $this->cartService->shippingCost(),
+            'total' => $this->cartService->totalWithShipping(),
         ]);
     }
 
@@ -36,6 +56,7 @@ class OrderController extends Controller
                 $this->cartService->contents(),
                 $request->orderData(),
                 auth()->id(),
+                $request->shippingCityId(),
             );
         } catch (DomainException $exception) {
             return redirect()->route('catalog.index')->with('error', $exception->getMessage());

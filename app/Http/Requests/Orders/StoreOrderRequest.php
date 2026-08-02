@@ -18,11 +18,19 @@ class StoreOrderRequest extends FormRequest
             'customer_email' => ['required', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:50'],
             'delivery_address' => ['required', 'string', 'max:500'],
+            'shipping_city_id' => ['required', 'integer', 'exists:shipping_cities,id'],
         ];
     }
 
     public function orderData(): array
     {
-        return $this->validated();
+        return collect($this->validated())
+            ->except('shipping_city_id')
+            ->all();
+    }
+
+    public function shippingCityId(): int
+    {
+        return (int) $this->validated('shipping_city_id');
     }
 }

@@ -37,7 +37,9 @@
                     </table>
                 </div>
                 <div class="card-footer text-end">
-                    <strong>Total: ${{ number_format($order->total, 2) }}</strong>
+                    <div><strong>Subtotal:</strong> ${{ number_format((float) ($order->subtotal ?? $order->total), 2) }}</div>
+                    <div><strong>Envio:</strong> ${{ number_format((float) ($order->shipping_cost ?? 0), 2) }}</div>
+                    <div><strong>Total:</strong> ${{ number_format($order->total, 2) }}</div>
                 </div>
             </div>
         </div>
@@ -50,7 +52,8 @@
                     <p class="mb-1"><strong>Nombre:</strong> {{ $order->customer_name }}</p>
                     <p class="mb-1"><strong>Correo:</strong> {{ $order->customer_email }}</p>
                     <p class="mb-1"><strong>Telefono:</strong> {{ $order->customer_phone ?: 'No registrado' }}</p>
-                    <p class="mb-0"><strong>Direccion:</strong> {{ $order->delivery_address }}</p>
+                    <p class="mb-1"><strong>Direccion:</strong> {{ $order->delivery_address }}</p>
+                    <p class="mb-0"><strong>Ciudad de envio:</strong> {{ $order->shipping_city_name ?: 'No registrada' }}</p>
                 </div>
             </div>
 

@@ -144,9 +144,15 @@
                                     <p>Productos</p>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a href="{{ route('shipping-cities.index') }}" class="nav-link {{ request()->is('shipping-cities*') ? 'active' : '' }}">
+                                    <i class="nav-icon bi bi-truck"></i>
+                                    <p>Ciudades de envio</p>
+                                </a>
+                            </li>
                         @endif
                         <li class="nav-item">
-                            <a href="{{ route('catalog.index') }}" class="nav-link {{ request()->is('catalogo') ? 'active' : '' }}">
+                            <a href="{{ route('catalog.index') }}" class="nav-link {{ request()->is('catalogo*') ? 'active' : '' }}">
                                 <i class="nav-icon bi bi-shop"></i>
                                 <p>Catalogo</p>
                             </a>

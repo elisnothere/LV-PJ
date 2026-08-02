@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ShippingCityController;
 use App\Http\Controllers\UserController;
 
 Route::get('/', HomeController::class)->name('home');
@@ -33,7 +34,7 @@ Route::get('test', function () {
     try {
         DB::connection()->getPdo();
 
-        return 'Conexión exitosa a la base de datos: ' . DB::connection()->getDatabaseName();
+        return 'Conexion exitosa a la base de datos: ' . DB::connection()->getDatabaseName();
     } catch (\Exception $e) {
         return 'Error al conectar a la base de datos: ' . $e->getMessage();
     }
@@ -66,6 +67,13 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('products', ProductController::class)->except(['show']);
     Route::post('/categoria', [CatalogController::class, 'storeCategory'])->name('categories.store');
     Route::patch('/categoria/{category}', [CatalogController::class, 'updateCategory'])->name('categories.update');
+
+    Route::get('/shipping-cities', [ShippingCityController::class, 'index'])->name('shipping-cities.index');
+    Route::get('/shipping-cities/create', [ShippingCityController::class, 'create'])->name('shipping-cities.create');
+    Route::post('/shipping-cities', [ShippingCityController::class, 'store'])->name('shipping-cities.store');
+    Route::get('/shipping-cities/{shippingCity}/edit', [ShippingCityController::class, 'edit'])->name('shipping-cities.edit');
+    Route::put('/shipping-cities/{shippingCity}', [ShippingCityController::class, 'update'])->name('shipping-cities.update');
+    Route::patch('/shipping-cities/{shippingCity}/activo', [ShippingCityController::class, 'toggleActive'])->name('shipping-cities.active');
 
     Route::get('/pedidos', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/pedidos/{order}', [OrderController::class, 'show'])->name('orders.show');

@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ShippingCity;
 use App\Models\User;
 use App\Services\CartService;
 use App\Services\CategoryService;
@@ -105,6 +106,11 @@ it('cart service adds updates removes and clears items', function () {
 
 it('creates an order and decrements stock through the order service', function () {
     $service = app(OrderService::class);
+    $shippingCity = ShippingCity::create([
+        'name' => 'Asuncion',
+        'shipping_cost' => 15,
+        'active' => true,
+    ]);
 
     $product = Product::create([
         'name' => 'Producto',
@@ -127,17 +133,25 @@ it('creates an order and decrements stock through the order service', function (
         'customer_email' => 'cliente@example.com',
         'customer_phone' => '123',
         'delivery_address' => 'Calle 123',
-    ], null);
+    ], null, $shippingCity->id);
 
     $product->refresh();
 
     expect($order->items)->toHaveCount(1)
         ->and($product->stock)->toBe(3)
-        ->and((float) $order->total)->toBe(50.0);
+        ->and((float) $order->subtotal)->toBe(50.0)
+        ->and((float) $order->shipping_cost)->toBe(15.0)
+        ->and((float) $order->total)->toBe(65.0)
+        ->and($order->shipping_city_name)->toBe('Asuncion');
 });
 
 it('fails order creation when stock is insufficient', function () {
     $service = app(OrderService::class);
+    $shippingCity = ShippingCity::create([
+        'name' => 'Central',
+        'shipping_cost' => 10,
+        'active' => true,
+    ]);
 
     $product = Product::create([
         'name' => 'Producto',
@@ -162,7 +176,7 @@ it('fails order creation when stock is insufficient', function () {
         'customer_email' => 'cliente@example.com',
         'customer_phone' => '123',
         'delivery_address' => 'Calle 123',
-    ], null);
+    ], null, $shippingCity->id);
 });
 
 it('creates a product with a newly entered category through the admin flow', function () {
@@ -267,6 +281,53 @@ it('forbids non admins from modifying categories', function () {
     ]);
 });
 
+it('allows admins to manage shipping cities from the dashboard', function () {
+    $admin = User::create([
+        'name' => 'Admin Envios',
+        'email' => 'admin-envios@test.com',
+        'password' => 'password123',
+        'role' => 'admin',
+        'active' => true,
+    ]);
+
+    $createResponse = $this->actingAs($admin)->post(route('shipping-cities.store'), [
+        'name' => 'Luque',
+        'shipping_cost' => 18.5,
+        'active' => 1,
+    ]);
+
+    $createResponse->assertRedirect(route('shipping-cities.index'));
+    $this->assertDatabaseHas('shipping_cities', [
+        'name' => 'Luque',
+        'shipping_cost' => 18.5,
+        'active' => 1,
+    ]);
+
+    $shippingCity = ShippingCity::where('name', 'Luque')->firstOrFail();
+
+    $updateResponse = $this->actingAs($admin)->put(route('shipping-cities.update', $shippingCity), [
+        'name' => 'Luque Centro',
+        'shipping_cost' => 22,
+        'active' => 1,
+    ]);
+
+    $updateResponse->assertRedirect(route('shipping-cities.index'));
+    $this->assertDatabaseHas('shipping_cities', [
+        'id' => $shippingCity->id,
+        'name' => 'Luque Centro',
+        'shipping_cost' => 22,
+        'active' => 1,
+    ]);
+
+    $toggleResponse = $this->actingAs($admin)->patch(route('shipping-cities.active', $shippingCity));
+
+    $toggleResponse->assertRedirect();
+    $this->assertDatabaseHas('shipping_cities', [
+        'id' => $shippingCity->id,
+        'active' => 0,
+    ]);
+});
+
 it('filters the catalog by category through the relationship', function () {
     $general = categoryForTest('General');
     $fitness = categoryForTest('Fitness');
@@ -310,6 +371,104 @@ it('loads category summary through the route-backed controller action', function
 
     $response->assertOk();
     $response->assertSee('General');
+});
+
+it('calculates shipping in checkout and persists an order snapshot', function () {
+    Session::start();
+
+    $user = User::create([
+        'name' => 'Cliente Pedido',
+        'email' => 'cliente-pedido@test.com',
+        'password' => 'password123',
+        'role' => 'cliente',
+        'active' => true,
+    ]);
+
+    $shippingCity = ShippingCity::create([
+        'name' => 'San Lorenzo',
+        'shipping_cost' => 12.5,
+        'active' => true,
+    ]);
+
+    $product = Product::create([
+        'name' => 'Auriculares',
+        'category_id' => categoryForTest('Audio')->id,
+        'description' => 'Desc',
+        'price' => 40,
+        'stock' => 5,
+        'active' => true,
+    ]);
+
+    $this->actingAs($user)->post(route('cart.add', $product), ['quantity' => 2]);
+
+    $checkoutResponse = $this->actingAs($user)->get(route('orders.checkout', ['shipping_city_id' => $shippingCity->id]));
+
+    $checkoutResponse->assertOk();
+    $checkoutResponse->assertSee('San Lorenzo');
+    $checkoutResponse->assertSee('$12.50', false);
+    $checkoutResponse->assertSee('$92.50', false);
+
+    $storeResponse = $this->actingAs($user)->post(route('orders.store'), [
+        'customer_name' => 'Cliente Pedido',
+        'customer_email' => 'cliente-pedido@test.com',
+        'customer_phone' => '555-123',
+        'delivery_address' => 'Av. Siempre Viva',
+        'shipping_city_id' => $shippingCity->id,
+    ]);
+
+    $storeResponse->assertRedirect();
+    $this->assertDatabaseHas('orders', [
+        'user_id' => $user->id,
+        'shipping_city_id' => $shippingCity->id,
+        'shipping_city_name' => 'San Lorenzo',
+        'subtotal' => 80,
+        'shipping_cost' => 12.5,
+        'total' => 92.5,
+    ]);
+
+    $shippingCity->update(['shipping_cost' => 99]);
+
+    $order = \App\Models\Order::latest()->first();
+    expect((float) $order->shipping_cost)->toBe(12.5)
+        ->and((float) $order->total)->toBe(92.5);
+});
+
+it('rejects inactive shipping cities during checkout', function () {
+    $user = User::create([
+        'name' => 'Cliente Pedido',
+        'email' => 'cliente-envio-inactivo@test.com',
+        'password' => 'password123',
+        'role' => 'cliente',
+        'active' => true,
+    ]);
+
+    $shippingCity = ShippingCity::create([
+        'name' => 'Inactiva',
+        'shipping_cost' => 5,
+        'active' => false,
+    ]);
+
+    $product = Product::create([
+        'name' => 'Teclado',
+        'category_id' => categoryForTest('Perifericos')->id,
+        'description' => 'Desc',
+        'price' => 30,
+        'stock' => 5,
+        'active' => true,
+    ]);
+
+    $this->actingAs($user)->post(route('cart.add', $product), ['quantity' => 1]);
+
+    $response = $this->from(route('orders.checkout'))->actingAs($user)->post(route('orders.store'), [
+        'customer_name' => 'Cliente Pedido',
+        'customer_email' => 'cliente-envio-inactivo@test.com',
+        'customer_phone' => '555-123',
+        'delivery_address' => 'Av. Siempre Viva',
+        'shipping_city_id' => $shippingCity->id,
+    ]);
+
+    $response->assertRedirect(route('orders.checkout'));
+    $response->assertSessionHasErrors('shipping_city_id');
 });
 
 it('prevents deleting your own user through the management service', function () {
