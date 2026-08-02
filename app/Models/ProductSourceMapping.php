@@ -5,23 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProductImage extends Model
+class ProductSourceMapping extends Model
 {
     protected $fillable = [
         'product_id',
-        'image_url',
         'source',
-        'is_primary',
-        'sort_order',
-        'external_url',
+        'external_id',
+        'external_updated_at',
         'checksum',
+        'raw_payload',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_primary' => 'boolean',
-            'sort_order' => 'integer',
+            'external_updated_at' => 'datetime',
+            'raw_payload' => 'array',
         ];
     }
 

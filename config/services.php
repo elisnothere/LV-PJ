@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'product_import' => [
+        'free_ecommerce_url' => env('FREE_ECOMMERCE_PRODUCTS_URL', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/products.json'),
+        'escuelajs_url' => env('ESCUELAJS_PRODUCTS_URL', 'https://api.escuelajs.co/api/v1/products'),
+        'route_misr_url' => env('ROUTE_MISR_PRODUCTS_URL', 'https://ecommerce.routemisr.com/api/v1/products'),
+        'max_attempts' => (int) env('PRODUCT_IMPORT_MAX_ATTEMPTS', 3),
+        'timeout_seconds' => (int) env('PRODUCT_IMPORT_TIMEOUT_SECONDS', 30),
+        'image_download_attempts' => (int) env('PRODUCT_IMPORT_IMAGE_ATTEMPTS', 3),
+        'image_timeout_seconds' => (int) env('PRODUCT_IMPORT_IMAGE_TIMEOUT_SECONDS', 60),
+        'retry_base_sleep_ms' => (int) env('PRODUCT_IMPORT_RETRY_SLEEP_MS', 250),
+    ],
+
 ];
