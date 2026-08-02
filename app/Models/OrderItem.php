@@ -13,6 +13,7 @@ class OrderItem extends Model
         'product_name',
         'quantity',
         'unit_price',
+        'regular_unit_price',
         'subtotal',
     ];
 
@@ -20,6 +21,7 @@ class OrderItem extends Model
     {
         return [
             'unit_price' => 'decimal:2',
+            'regular_unit_price' => 'decimal:2',
             'subtotal' => 'decimal:2',
         ];
     }

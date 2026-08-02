@@ -89,8 +89,13 @@
                 </div>
                 <div class="card-body">
                     @forelse ($cart as $item)
-                        <div class="d-flex justify-content-between border-bottom py-2">
-                            <span>{{ $item['quantity'] }} x {{ $item['name'] }}</span>
+                        <div class="d-flex justify-content-between border-bottom py-2 gap-3">
+                            <div>
+                                <span>{{ $item['quantity'] }} x {{ $item['name'] }}</span>
+                                @if (($item['regular_price'] ?? $item['price']) > $item['price'])
+                                    <div class="small text-secondary text-decoration-line-through">${{ number_format($item['regular_price'], 2) }}</div>
+                                @endif
+                            </div>
                             <strong>${{ number_format($item['price'] * $item['quantity'], 2) }}</strong>
                         </div>
                     @empty

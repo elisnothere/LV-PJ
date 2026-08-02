@@ -7,6 +7,11 @@
         </div>
     @endif
 
+    @php
+        $promotionStartsAt = old('promotional_starts_at', isset($product) && $product->promotional_starts_at ? $product->promotional_starts_at->format('Y-m-d\TH:i') : '');
+        $promotionEndsAt = old('promotional_ends_at', isset($product) && $product->promotional_ends_at ? $product->promotional_ends_at->format('Y-m-d\TH:i') : '');
+    @endphp
+
     <div class="row">
         <div class="form-group col-12 col-md-6 mb-3">
             <label for="name">Producto</label>
@@ -36,15 +41,33 @@
         </div>
 
         <div class="form-group col-12 col-md-4 mb-3">
-            <label for="price">Precio</label>
+            <label for="price">Precio regular</label>
             <input type="number" step="0.01" min="0" class="form-control @error('price') is-invalid @enderror" id="price" name="price" value="{{ old('price', $product->price ?? '') }}">
             @error('price') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+
+        <div class="form-group col-12 col-md-4 mb-3">
+            <label for="promotional_price">Precio promocional</label>
+            <input type="number" step="0.01" min="0" class="form-control @error('promotional_price') is-invalid @enderror" id="promotional_price" name="promotional_price" value="{{ old('promotional_price', $product->promotional_price ?? '') }}">
+            @error('promotional_price') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
         <div class="form-group col-12 col-md-4 mb-3">
             <label for="stock">Stock</label>
             <input type="number" min="0" class="form-control @error('stock') is-invalid @enderror" id="stock" name="stock" value="{{ old('stock', $product->stock ?? 0) }}">
             @error('stock') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+
+        <div class="form-group col-12 col-md-6 mb-3">
+            <label for="promotional_starts_at">Promo desde</label>
+            <input type="datetime-local" class="form-control @error('promotional_starts_at') is-invalid @enderror" id="promotional_starts_at" name="promotional_starts_at" value="{{ $promotionStartsAt }}">
+            @error('promotional_starts_at') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+
+        <div class="form-group col-12 col-md-6 mb-3">
+            <label for="promotional_ends_at">Promo hasta</label>
+            <input type="datetime-local" class="form-control @error('promotional_ends_at') is-invalid @enderror" id="promotional_ends_at" name="promotional_ends_at" value="{{ $promotionEndsAt }}">
+            @error('promotional_ends_at') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
         <div class="form-group col-12 col-md-4 mb-3">

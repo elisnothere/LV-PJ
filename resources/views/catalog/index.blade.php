@@ -119,7 +119,12 @@
                         </div>
                         <p class="card-text text-secondary mt-2">{{ $product->description ?: 'Sin descripcion.' }}</p>
                         <div class="mt-auto">
-                            <p class="fs-5 fw-semibold mb-1">${{ number_format($product->price, 2) }}</p>
+                            @if ($product->hasActivePromotion())
+                                <p class="fs-5 fw-semibold mb-0 text-danger">${{ number_format($product->effective_price, 2) }}</p>
+                                <p class="text-secondary text-decoration-line-through mb-1">${{ number_format($product->price, 2) }}</p>
+                            @else
+                                <p class="fs-5 fw-semibold mb-1">${{ number_format($product->price, 2) }}</p>
+                            @endif
                             <p class="text-secondary mb-3">Stock: {{ $product->stock }}</p>
                             <div class="d-flex gap-2">
                                 <a href="{{ route('catalog.show', $product) }}" class="btn btn-outline-secondary">Ver detalle</a>

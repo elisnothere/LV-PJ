@@ -11,7 +11,15 @@
 
     <ul>
         <li>Categoria: {{ $product->category?->name ?? 'Sin categoria' }}</li>
-        <li>Precio: ${{ number_format($product->price, 2) }}</li>
+        <li>
+            Precio:
+            @if ($product->hasActivePromotion())
+                ${{ number_format($product->effective_price, 2) }}
+                (antes ${{ number_format($product->price, 2) }})
+            @else
+                ${{ number_format($product->price, 2) }}
+            @endif
+        </li>
         <li>Stock actual: {{ $product->stock }}</li>
     </ul>
 

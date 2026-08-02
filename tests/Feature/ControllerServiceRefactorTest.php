@@ -8,6 +8,7 @@ use App\Services\CartService;
 use App\Services\CategoryService;
 use App\Services\OrderService;
 use App\Services\UserManagementService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
@@ -126,6 +127,7 @@ it('creates an order and decrements stock through the order service', function (
             'id' => $product->id,
             'name' => $product->name,
             'price' => 25.0,
+            'regular_price' => 25.0,
             'quantity' => 2,
         ],
     ], [
@@ -142,6 +144,7 @@ it('creates an order and decrements stock through the order service', function (
         ->and((float) $order->subtotal)->toBe(50.0)
         ->and((float) $order->shipping_cost)->toBe(15.0)
         ->and((float) $order->total)->toBe(65.0)
+        ->and((float) $order->items->first()->regular_unit_price)->toBe(25.0)
         ->and($order->shipping_city_name)->toBe('Asuncion');
 });
 
@@ -169,6 +172,7 @@ it('fails order creation when stock is insufficient', function () {
             'id' => $product->id,
             'name' => $product->name,
             'price' => 25.0,
+            'regular_price' => 25.0,
             'quantity' => 2,
         ],
     ], [
@@ -203,6 +207,142 @@ it('creates a product with a newly entered category through the admin flow', fun
 
     expect(Category::count())->toBe(1)
         ->and($product->category?->name)->toBe('Audio');
+});
+
+it('validates promotional price and date range in the admin product flow', function () {
+    $admin = User::create([
+        'name' => 'Admin Promo',
+        'email' => 'admin-promo@test.com',
+        'password' => 'password123',
+        'role' => 'admin',
+        'active' => true,
+    ]);
+
+    $response = $this->from(route('products.create'))->actingAs($admin)->post(route('products.store'), [
+        'name' => 'Monitor 4K',
+        'new_category_name' => 'Displays',
+        'description' => 'Desc',
+        'price' => 100,
+        'promotional_price' => 120,
+        'promotional_starts_at' => '2026-08-02T10:00',
+        'promotional_ends_at' => '2026-08-01T10:00',
+        'stock' => 4,
+        'active' => 1,
+    ]);
+
+    $response->assertRedirect(route('products.create'));
+    $response->assertSessionHasErrors(['promotional_price', 'promotional_ends_at']);
+});
+
+it('uses promotional price in catalog cart checkout and order snapshots', function () {
+    Carbon::setTestNow('2026-08-02 12:00:00');
+    Session::start();
+
+    $user = User::create([
+        'name' => 'Cliente Promo',
+        'email' => 'cliente-promo@test.com',
+        'password' => 'password123',
+        'role' => 'cliente',
+        'active' => true,
+    ]);
+
+    $shippingCity = ShippingCity::create([
+        'name' => 'San Lorenzo',
+        'shipping_cost' => 12.5,
+        'active' => true,
+    ]);
+
+    $product = Product::create([
+        'name' => 'Auriculares',
+        'category_id' => categoryForTest('Audio')->id,
+        'description' => 'Desc',
+        'price' => 40,
+        'promotional_price' => 30,
+        'promotional_starts_at' => '2026-08-01 00:00:00',
+        'promotional_ends_at' => '2026-08-03 23:59:59',
+        'stock' => 5,
+        'active' => true,
+    ]);
+
+    $catalogResponse = $this->get(route('catalog.index'));
+    $catalogResponse->assertOk();
+    $catalogResponse->assertSee('$30.00', false);
+    $catalogResponse->assertSee('text-decoration-line-through', false);
+
+    $detailResponse = $this->get(route('catalog.show', $product));
+    $detailResponse->assertOk();
+    $detailResponse->assertSee('$30.00', false);
+    $detailResponse->assertSee('$40.00', false);
+
+    $this->actingAs($user)->post(route('cart.add', $product), ['quantity' => 2]);
+
+    $cartResponse = $this->actingAs($user)->get(route('cart.index'));
+    $cartResponse->assertOk();
+    $cartResponse->assertSee('$30.00', false);
+    $cartResponse->assertSee('$60.00', false);
+
+    $checkoutResponse = $this->actingAs($user)->get(route('orders.checkout', ['shipping_city_id' => $shippingCity->id]));
+    $checkoutResponse->assertOk();
+    $checkoutResponse->assertSee('$72.50', false);
+
+    $storeResponse = $this->actingAs($user)->post(route('orders.store'), [
+        'customer_name' => 'Cliente Promo',
+        'customer_email' => 'cliente-promo@test.com',
+        'customer_phone' => '555-123',
+        'delivery_address' => 'Av. Siempre Viva',
+        'shipping_city_id' => $shippingCity->id,
+    ]);
+
+    $storeResponse->assertRedirect();
+    $this->assertDatabaseHas('orders', [
+        'user_id' => $user->id,
+        'shipping_city_id' => $shippingCity->id,
+        'subtotal' => 60,
+        'shipping_cost' => 12.5,
+        'total' => 72.5,
+    ]);
+
+    $this->assertDatabaseHas('order_items', [
+        'product_id' => $product->id,
+        'unit_price' => 30,
+        'regular_unit_price' => 40,
+        'subtotal' => 60,
+    ]);
+
+    Carbon::setTestNow();
+});
+
+it('does not apply a future or expired promotion', function () {
+    Carbon::setTestNow('2026-08-02 12:00:00');
+
+    $futureProduct = Product::create([
+        'name' => 'Tablet',
+        'category_id' => categoryForTest('Electronics')->id,
+        'description' => 'Desc',
+        'price' => 200,
+        'promotional_price' => 150,
+        'promotional_starts_at' => '2026-08-03 00:00:00',
+        'stock' => 2,
+        'active' => true,
+    ]);
+
+    $expiredProduct = Product::create([
+        'name' => 'Camara',
+        'category_id' => categoryForTest('Electronics')->id,
+        'description' => 'Desc',
+        'price' => 300,
+        'promotional_price' => 250,
+        'promotional_ends_at' => '2026-08-01 23:59:59',
+        'stock' => 2,
+        'active' => true,
+    ]);
+
+    expect($futureProduct->hasActivePromotion())->toBeFalse()
+        ->and($futureProduct->effectivePrice())->toBe(200.0)
+        ->and($expiredProduct->hasActivePromotion())->toBeFalse()
+        ->and($expiredProduct->effectivePrice())->toBe(300.0);
+
+    Carbon::setTestNow();
 });
 
 it('reuses equivalent category names without creating duplicates', function () {

@@ -29,7 +29,12 @@
                                 <tr>
                                     <td>{{ $item->product_name }}</td>
                                     <td>{{ $item->quantity }}</td>
-                                    <td>${{ number_format($item->unit_price, 2) }}</td>
+                                    <td>
+                                        <div>${{ number_format($item->unit_price, 2) }}</div>
+                                        @if ($item->regular_unit_price && $item->regular_unit_price > $item->unit_price)
+                                            <small class="text-secondary text-decoration-line-through">${{ number_format($item->regular_unit_price, 2) }}</small>
+                                        @endif
+                                    </td>
                                     <td>${{ number_format($item->subtotal, 2) }}</td>
                                 </tr>
                             @endforeach

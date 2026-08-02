@@ -19,7 +19,42 @@ class CartService
 
     public function contents(): array
     {
-        return $this->session->get('cart', []);
+        $cart = $this->session->get('cart', []);
+
+        if ($cart === []) {
+            return [];
+        }
+
+        $products = Product::with('primaryImage')
+            ->whereKey(array_keys($cart))
+            ->get()
+            ->keyBy('id');
+
+        $syncedCart = collect($cart)
+            ->map(function (array $item, int|string $productId) use ($products) {
+                $product = $products->get((int) $productId);
+
+                if (! $product) {
+                    return null;
+                }
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'image_url' => $product->primary_image_url,
+                    'price' => $product->effectivePrice(),
+                    'regular_price' => (float) $product->price,
+                    'quantity' => min((int) $item['quantity'], max((int) $product->stock, 1)),
+                    'stock' => (int) $product->stock,
+                ];
+            })
+            ->filter()
+            ->mapWithKeys(fn (?array $item) => $item ? [$item['id'] => $item] : [])
+            ->all();
+
+        $this->session->put('cart', $syncedCart);
+
+        return $syncedCart;
     }
 
     public function subtotal(): float
@@ -81,7 +116,8 @@ class CartService
             'id' => $product->id,
             'name' => $product->name,
             'image_url' => $product->primary_image_url,
-            'price' => (float) $product->price,
+            'price' => $product->effectivePrice(),
+            'regular_price' => (float) $product->price,
             'quantity' => $newQuantity,
             'stock' => $product->stock,
         ];

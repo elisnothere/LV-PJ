@@ -28,11 +28,15 @@ class MailtrapBackInStockMailer
             'product' => $product,
         ])->render();
 
+        $priceText = $product->hasActivePromotion()
+            ? '$' . number_format((float) $product->effective_price, 2) . ' (antes $' . number_format((float) $product->price, 2) . ')'
+            : '$' . number_format((float) $product->price, 2);
+
         $text = implode(PHP_EOL, [
             'Tu producto ya esta disponible otra vez.',
             'Producto: ' . $product->name,
             'Categoria: ' . ($product->category?->name ?? 'Sin categoria'),
-            'Precio: $' . number_format((float) $product->price, 2),
+            'Precio: ' . $priceText,
             'Stock actual: ' . $product->stock,
             'Ver producto: ' . $detailUrl,
         ]);

@@ -14,6 +14,9 @@ trait InteractsWithProductForm
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'price' => $validated['price'],
+            'promotional_price' => $validated['promotional_price'] ?? null,
+            'promotional_starts_at' => $validated['promotional_starts_at'] ?? null,
+            'promotional_ends_at' => $validated['promotional_ends_at'] ?? null,
             'stock' => $validated['stock'],
             'active' => $this->boolean('active'),
         ];
@@ -120,6 +123,10 @@ trait InteractsWithProductForm
         $validator->after(function ($validator) {
             $hasExistingCategory = $this->selectedCategoryId() !== null;
             $hasNewCategory = $this->newCategoryName() !== null;
+            $price = $this->input('price');
+            $promotionalPrice = $this->input('promotional_price');
+            $startsAt = $this->input('promotional_starts_at');
+            $endsAt = $this->input('promotional_ends_at');
 
             if ($hasExistingCategory && $hasNewCategory) {
                 $validator->errors()->add('category_id', 'Seleccione una categoria existente o escriba una nueva, no ambas opciones.');
@@ -127,6 +134,14 @@ trait InteractsWithProductForm
 
             if (! $hasExistingCategory && ! $hasNewCategory) {
                 $validator->errors()->add('category_id', 'Seleccione una categoria o escriba una nueva.');
+            }
+
+            if ($promotionalPrice !== null && $promotionalPrice !== '' && is_numeric($price) && is_numeric($promotionalPrice) && (float) $promotionalPrice >= (float) $price) {
+                $validator->errors()->add('promotional_price', 'El precio promocional debe ser menor al precio regular.');
+            }
+
+            if ($startsAt && $endsAt && strtotime((string) $startsAt) !== false && strtotime((string) $endsAt) !== false && strtotime((string) $endsAt) < strtotime((string) $startsAt)) {
+                $validator->errors()->add('promotional_ends_at', 'La fecha de fin debe ser posterior o igual a la fecha de inicio.');
             }
         });
     }
@@ -138,6 +153,7 @@ trait InteractsWithProductForm
             'new_category_name.max' => 'La nueva categoria no puede tener mas de 120 caracteres.',
             'image_files.*.image' => 'Cada archivo subido debe ser una imagen valida.',
             'image_files.*.max' => 'Cada imagen debe pesar como maximo 10 MB.',
+            'promotional_price.min' => 'El precio promocional no puede ser negativo.',
         ];
     }
 }

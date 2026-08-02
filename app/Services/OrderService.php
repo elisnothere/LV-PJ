@@ -23,8 +23,6 @@ class OrderService
 
         return DB::transaction(function () use ($cart, $orderData, $userId, $shippingCityId) {
             $shippingCity = $this->shippingCityService->resolveActiveOrFail($shippingCityId);
-            $subtotal = (float) collect($cart)->sum(fn ($item) => $item['price'] * $item['quantity']);
-            $shippingCost = (float) $shippingCity->shipping_cost;
 
             $order = Order::create([
                 ...$orderData,
@@ -32,10 +30,12 @@ class OrderService
                 'shipping_city_id' => $shippingCity->id,
                 'shipping_city_name' => $shippingCity->name,
                 'code' => 'PED-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6)),
-                'subtotal' => $subtotal,
-                'shipping_cost' => $shippingCost,
-                'total' => $subtotal + $shippingCost,
+                'subtotal' => 0,
+                'shipping_cost' => (float) $shippingCity->shipping_cost,
+                'total' => (float) $shippingCity->shipping_cost,
             ]);
+
+            $subtotal = 0.0;
 
             foreach ($cart as $item) {
                 $product = Product::lockForUpdate()->find($item['id']);
@@ -46,18 +46,31 @@ class OrderService
                     ]);
                 }
 
+                $unitPrice = $product->effectivePrice();
+                $regularUnitPrice = (float) $product->price;
+                $itemSubtotal = $unitPrice * $item['quantity'];
+                $subtotal += $itemSubtotal;
+
                 $product->decrement('stock', $item['quantity']);
 
                 $order->items()->create([
                     'product_id' => $product->id,
-                    'product_name' => $item['name'],
+                    'product_name' => $product->name,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['price'],
-                    'subtotal' => $item['price'] * $item['quantity'],
+                    'unit_price' => $unitPrice,
+                    'regular_unit_price' => $regularUnitPrice,
+                    'subtotal' => $itemSubtotal,
                 ]);
             }
 
-            return $order;
+            $shippingCost = (float) $shippingCity->shipping_cost;
+
+            $order->update([
+                'subtotal' => $subtotal,
+                'total' => $subtotal + $shippingCost,
+            ]);
+
+            return $order->fresh('items');
         });
     }
 

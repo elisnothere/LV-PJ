@@ -41,9 +41,21 @@
                                     </div>
                                 @endif
                             </td>
-                            <td>{{ $product->name }}</td>
+                            <td>
+                                {{ $product->name }}
+                                @if ($product->hasActivePromotion())
+                                    <div><span class="badge text-bg-danger mt-1">Promo activa</span></div>
+                                @endif
+                            </td>
                             <td>{{ $product->category?->name ?? 'Sin categoria' }}</td>
-                            <td>${{ number_format($product->price, 2) }}</td>
+                            <td>
+                                @if ($product->hasActivePromotion())
+                                    <div class="fw-semibold text-danger">${{ number_format($product->effective_price, 2) }}</div>
+                                    <small class="text-decoration-line-through text-secondary">${{ number_format($product->price, 2) }}</small>
+                                @else
+                                    ${{ number_format($product->price, 2) }}
+                                @endif
+                            </td>
                             <td>{{ $product->stock }}</td>
                             <td>
                                 <span class="badge {{ $product->active ? 'text-bg-success' : 'text-bg-secondary' }}">

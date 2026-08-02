@@ -20,6 +20,9 @@ class UpdateProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:0'],
+            'promotional_price' => ['nullable', 'numeric', 'min:0'],
+            'promotional_starts_at' => ['nullable', 'date'],
+            'promotional_ends_at' => ['nullable', 'date'],
             'stock' => ['required', 'integer', 'min:0'],
         ], $this->categoryRules(), $this->imageUrlRules());
     }

@@ -52,7 +52,14 @@
                                 @endif
                             </td>
                             <td>{{ $item['name'] }}</td>
-                            <td>${{ number_format($item['price'], 2) }}</td>
+                            <td>
+                                @if (($item['regular_price'] ?? $item['price']) > $item['price'])
+                                    <div class="fw-semibold text-danger">${{ number_format($item['price'], 2) }}</div>
+                                    <small class="text-decoration-line-through text-secondary">${{ number_format($item['regular_price'], 2) }}</small>
+                                @else
+                                    ${{ number_format($item['price'], 2) }}
+                                @endif
+                            </td>
                             <td>
                                 <form action="{{ route('cart.update', $item['id']) }}" method="post" class="d-flex gap-2">
                                     @csrf
