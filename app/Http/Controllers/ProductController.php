@@ -87,7 +87,7 @@ class ProductController extends Controller
             'price' => ['required', 'numeric', 'min:0'],
             'stock' => ['required', 'integer', 'min:0'],
             'image_files' => ['nullable', 'array'],
-            'image_files.*' => ['image', 'max:2048'],
+            'image_files.*' => ['uploaded', 'image', 'max:10240'],
             'image_urls' => [
                 'nullable',
                 'string',
@@ -103,6 +103,10 @@ class ProductController extends Controller
             'primary_image_id' => ['nullable', 'integer'],
             'delete_image_ids' => ['nullable', 'array'],
             'delete_image_ids.*' => ['integer'],
+        ], [
+            'image_files.*.uploaded' => 'No se pudo subir una imagen. Verifique que el archivo pese menos de 10 MB y vuelva a intentar.',
+            'image_files.*.image' => 'Cada archivo subido debe ser una imagen valida.',
+            'image_files.*.max' => 'Cada imagen debe pesar como maximo 10 MB.',
         ]);
 
         return [

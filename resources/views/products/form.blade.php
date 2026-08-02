@@ -36,7 +36,12 @@
             <label for="image_files">Subir imagenes</label>
             <input type="file" class="form-control @error('image_files') is-invalid @enderror @error('image_files.*') is-invalid @enderror" id="image_files" name="image_files[]" accept="image/*" multiple>
             @error('image_files') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            @error('image_files.*') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            @foreach ($errors->get('image_files.*') as $fileErrors)
+                @foreach ($fileErrors as $message)
+                    <div class="text-danger small mt-1">{{ $message }}</div>
+                @endforeach
+            @endforeach
+            <small class="text-secondary">Puede seleccionar varias imagenes. Maximo 10 MB por archivo.</small>
         </div>
 
         <div class="form-group col-12 mb-3">
