@@ -41,7 +41,18 @@
                 <tbody>
                     @forelse ($cart as $item)
                         <tr>
-                            <td>{{ $item['name'] }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    @if (! empty($item['image_url']))
+                                        <img src="{{ $item['image_url'] }}" alt="{{ $item['name'] }}" class="rounded border" style="width: 64px; height: 64px; object-fit: cover;">
+                                    @else
+                                        <div class="bg-body-secondary border rounded d-flex align-items-center justify-content-center text-secondary" style="width: 64px; height: 64px;">
+                                            <i class="bi bi-box-seam fs-3"></i>
+                                        </div>
+                                    @endif
+                                    <span class="fw-semibold">{{ $item['name'] }}</span>
+                                </div>
+                            </td>
                             <td>${{ number_format($item['price'], 2) }}</td>
                             <td>
                                 <form action="{{ route('cart.update', $item['id']) }}" method="post" class="d-flex gap-2">
