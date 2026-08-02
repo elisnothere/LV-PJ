@@ -17,9 +17,10 @@
             </a>
         </div>
         <div class="card-body table-responsive p-0">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0 align-middle">
                 <thead>
                     <tr>
+                        <th style="width: 88px;">Foto</th>
                         <th>Producto</th>
                         <th>Categoria</th>
                         <th>Precio</th>
@@ -31,6 +32,15 @@
                 <tbody>
                     @forelse ($products as $product)
                         <tr>
+                            <td>
+                                @if ($product->primary_image_url)
+                                    <img src="{{ $product->primary_image_url }}" alt="{{ $product->name }}" class="img-thumbnail" style="width: 56px; height: 56px; object-fit: cover;">
+                                @else
+                                    <div class="bg-body-secondary d-flex align-items-center justify-content-center rounded text-secondary" style="width: 56px; height: 56px;">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                @endif
+                            </td>
                             <td>{{ $product->name }}</td>
                             <td>{{ $product->category }}</td>
                             <td>${{ number_format($product->price, 2) }}</td>
@@ -55,7 +65,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-4">No hay productos registrados.</td>
+                            <td colspan="7" class="text-center py-4">No hay productos registrados.</td>
                         </tr>
                     @endforelse
                 </tbody>

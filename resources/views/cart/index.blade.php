@@ -28,9 +28,10 @@
             @endif
         </div>
         <div class="card-body table-responsive p-0">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0 align-middle">
                 <thead>
                     <tr>
+                        <th style="width: 96px;">Foto</th>
                         <th>Producto</th>
                         <th>Precio</th>
                         <th style="width: 180px;">Cantidad</th>
@@ -42,17 +43,15 @@
                     @forelse ($cart as $item)
                         <tr>
                             <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    @if (! empty($item['image_url']))
-                                        <img src="{{ $item['image_url'] }}" alt="{{ $item['name'] }}" class="rounded border" style="width: 64px; height: 64px; object-fit: cover;">
-                                    @else
-                                        <div class="bg-body-secondary border rounded d-flex align-items-center justify-content-center text-secondary" style="width: 64px; height: 64px;">
-                                            <i class="bi bi-box-seam fs-3"></i>
-                                        </div>
-                                    @endif
-                                    <span class="fw-semibold">{{ $item['name'] }}</span>
-                                </div>
+                                @if (! empty($item['image_url']))
+                                    <img src="{{ $item['image_url'] }}" alt="{{ $item['name'] }}" class="img-thumbnail" style="width: 64px; height: 64px; object-fit: cover;">
+                                @else
+                                    <div class="bg-body-secondary d-flex align-items-center justify-content-center rounded text-secondary" style="width: 64px; height: 64px;">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                @endif
                             </td>
+                            <td>{{ $item['name'] }}</td>
                             <td>${{ number_format($item['price'], 2) }}</td>
                             <td>
                                 <form action="{{ route('cart.update', $item['id']) }}" method="post" class="d-flex gap-2">
@@ -77,7 +76,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center py-4">El carrito esta vacio.</td>
+                            <td colspan="6" class="text-center py-4">El carrito esta vacio.</td>
                         </tr>
                     @endforelse
                 </tbody>

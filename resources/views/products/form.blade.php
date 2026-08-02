@@ -33,16 +33,45 @@
         </div>
 
         <div class="form-group col-12 col-md-4 mb-3">
-            <label for="image_url">Imagen URL</label>
-            <input type="text" class="form-control @error('image_url') is-invalid @enderror" id="image_url" name="image_url" value="{{ old('image_url', $product->image_url ?? '') }}">
-            @error('image_url') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <label for="image_files">Subir imagenes</label>
+            <input type="file" class="form-control @error('image_files') is-invalid @enderror @error('image_files.*') is-invalid @enderror" id="image_files" name="image_files[]" accept="image/*" multiple>
+            @error('image_files') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            @error('image_files.*') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
 
-        <div class="form-group col-12 col-md-4 mb-3">
-            <label for="image_file">Subir imagen</label>
-            <input type="file" class="form-control @error('image_file') is-invalid @enderror" id="image_file" name="image_file" accept="image/*">
-            @error('image_file') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        <div class="form-group col-12 mb-3">
+            <label for="image_urls">Imagenes por URL</label>
+            <textarea class="form-control @error('image_urls') is-invalid @enderror" id="image_urls" name="image_urls" rows="3" placeholder="https://ejemplo.com/imagen-1.jpg&#10;https://ejemplo.com/imagen-2.jpg">{{ old('image_urls') }}</textarea>
+            @error('image_urls') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <small class="text-secondary">Ingrese una URL por linea.</small>
         </div>
+
+        @if (isset($product) && $product->images->isNotEmpty())
+            @php
+                $selectedPrimaryImageId = old('primary_image_id', $product->primaryImage?->id);
+                $deletedImageIds = old('delete_image_ids', []);
+            @endphp
+            <div class="form-group col-12 mb-3">
+                <label class="d-block">Imagenes actuales</label>
+                <div class="row g-3">
+                    @foreach ($product->images as $image)
+                        <div class="col-12 col-sm-6 col-lg-4">
+                            <div class="border rounded p-2 h-100">
+                                <img src="{{ $image->image_url }}" alt="{{ $product->name }}" class="img-fluid rounded border mb-2" style="width: 100%; height: 140px; object-fit: cover;">
+                                <div class="form-check">
+                                    <input type="radio" class="form-check-input" name="primary_image_id" id="primary_image_{{ $image->id }}" value="{{ $image->id }}" @checked((string) $selectedPrimaryImageId === (string) $image->id)>
+                                    <label class="form-check-label" for="primary_image_{{ $image->id }}">Principal</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="delete_image_ids[]" id="delete_image_{{ $image->id }}" value="{{ $image->id }}" @checked(in_array($image->id, $deletedImageIds))>
+                                    <label class="form-check-label text-danger" for="delete_image_{{ $image->id }}">Eliminar</label>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         <div class="form-group col-12 mb-3">
             <label for="description">Descripcion</label>

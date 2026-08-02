@@ -46,8 +46,8 @@
         @forelse ($products as $product)
             <div class="col-12 col-md-6 col-xl-4 mb-3">
                 <div class="card h-100">
-                    @if ($product->image_url)
-                        <img src="{{ $product->image_url }}" class="card-img-top" alt="{{ $product->name }}" style="height: 180px; object-fit: cover;">
+                    @if ($product->primary_image_url)
+                        <img src="{{ $product->primary_image_url }}" class="card-img-top" alt="{{ $product->name }}" style="height: 180px; object-fit: cover;">
                     @else
                         <div class="bg-body-secondary d-flex align-items-center justify-content-center" style="height: 180px;">
                             <i class="bi bi-box-seam display-3 text-secondary"></i>

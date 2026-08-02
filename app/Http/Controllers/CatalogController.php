@@ -16,7 +16,7 @@ class CatalogController extends Controller
             ->orderBy('category')
             ->pluck('category');
 
-        $products = Product::query()
+        $products = Product::with('primaryImage')
             ->where('active', true)
             ->when($request->filled('buscar'), function ($query) use ($request) {
                 $search = (string) $request->string('buscar');
